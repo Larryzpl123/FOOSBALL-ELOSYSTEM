@@ -122,8 +122,8 @@ def get_or_create_player(raw_name):
     return players[canon]
 
 def adjust_opponent_rating(opponent_rating, player_rating):
-    if opponent_rating == RATING_MIN and player_rating > 150:
-        return 150
+    if opponent_rating == RATING_MIN and player_rating > 1500:
+        return 1500
     return opponent_rating
 
 def update_rating(curr_rating, score, opposition_rating, multiplier):
@@ -295,6 +295,21 @@ def process_game(command):
     save_data()
     print("Game processed and ratings updated.")
 
+def print_players_alphabetically():
+    if not players:
+        print("No player data available.")
+        return
+    
+    sorted_list = sorted(players.items(), key=lambda kv: kv[1]["display"].lower())
+    print("DisplayName, AverageRating, OffenseRating, DefenseRating, TimesPlayed, WinRate")
+    print("Rating from 100 to 2999")
+    for (key, data) in sorted_list:
+        played = data["played"]
+        wins = data["wins"]
+        win_rate = round((wins / played) * 100) if played > 0 else 0
+        player_str = f"{data['display']}, A-{data['avg']}, O-{data['offense']}, D-{data['defense']}, T-{played}, R-{win_rate}"
+        print(player_str)
+
 
 def main():
     load_data()
@@ -313,6 +328,8 @@ def main():
             print_players()
         elif command.lower() == "best":
             print_best_players()
+        elif command.lower() == "name":
+            print_players_alphabetically()
         elif command == "":
             continue
         else:
