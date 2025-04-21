@@ -58,16 +58,28 @@
     <div class="section">
         <h2>Load Data</h2>
         <textarea id="data-input" rows="10" cols="50" placeholder="Paste data here (e.g., JustinCheng, 100, 100, 0, 0)"></textarea>
+        <br/>
         <button onclick="loadPastedData()">Load Data</button>
+        <br/>
+        <font color="red"> scroll to bottom for example dataset for testing <front/>
     </div>
     <div class="section">
         <h2>Player Statistics</h2>
         <div id="player-list"></div>
     </div>
     <div class="section">
-        <h2>Enter Command</h2>
+        <h2>Enter Commands</h2>
         <input type="text" id="command-input" size="50" placeholder="e.g., a;b closewin c;d">
         <button onclick="processCommand()">Process Command</button>
+        <br/>
+        <font color="black">
+        pp - print player stats <br/>
+        best - best players <br/>
+        teama typewin teamb - (type: closewin, smallwin, win, bigwin, perfectwin) <br/>
+        name - print player names alphabetically <br/>
+        add - add new player <br/>
+        combine - combine two players stats <br/>
+        rank a/o/d - rank by average / offense / defense <br/>
     </div>
     <script>
         // Constants
@@ -492,5 +504,29 @@
         loadData();
         if (Object.keys(players).length) printPlayers();
     </script>
+    <font color="red">
+Example Data Set (Copy this for testing): <br/>
+<br/>
+<font color="black">
+GraysonHou, 165, 155, 32, 69, 160, copper, copper, copper. <br/>
+WilliamGao, 179, 137, 41, 54, 158, iron, copper, copper. <br/>
+LarryZhong, 125, 188, 60, 57, 156, lz, lz, lz. <br/>
+JeanLuc, 110, 182, 8, 38, 146, copper, iron, iron. <br/>
+BradyGriffin, 153, 110, 9, 78, 132, iron, copper, iron. <br/>
+JeffersonWei, 156, 100, 7, 71, 128, iron, copper, iron. <br/>
+Anonymous, 101, 150, 53, 30, 126, copper, iron, iron. <br/>
+PerkinShowalter, 116, 134, 6, 33, 125, iron, iron, iron. <br/>
+JeffJin, 144, 100, 16, 62, 122, iron, iron, iron. <br/>
+ParkerHoppy, 139, 106, 6, 67, 122, iron, iron, iron. <br/>
+SamuelLi, 130, 108, 23, 48, 119, iron, iron, iron. <br/>
+RyanGong, 124, 100, 1, 100, 112, iron, iron, iron. <br/>
+StevenHou, 112, 112, 8, 50, 112, iron, iron, iron. <br/>
+JustinCheng, 120, 100, 18, 39, 110, iron, iron, iron. <br/>
+AustinLiu, 110, 105, 16, 38, 108, iron, iron, iron. <br/>
+JasperChapman, 116, 100, 1, 100, 108, iron, iron, iron. <br/>
+ThayerMahan, 100, 116, 8, 50, 108, iron, iron, iron. <br/>
+LiamLin, 100, 110, 11, 36, 105, iron, iron, iron. <br/>
+CadeBrekken, 109, 100, 1, 100, 104, iron, iron, iron. <br/>
+PrestonPhillis, 104, 104, 1, 100, 104, iron, iron, iron. <br/>
 </body>
 </html>
