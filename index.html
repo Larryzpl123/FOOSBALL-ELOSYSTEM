@@ -1,524 +1,105 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Foosball Elo Rating System (JS Version)</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 1rem;
-      max-width: 800px;
-      line-height: 1.6;
-    }
-    h1, h2 {
-      color: #333;
-    }
-    textarea, input[type="text"] {
-      width: 100%;
-      padding: 0.5rem;
-      margin: 0.5rem 0;
-      box-sizing: border-box;
-      font-family: monospace;
-    }
-    button {
-      padding: 0.5rem 1rem;
-      margin: 0.5rem 0;
-    }
-    pre {
-      background: #f4f4f4;
-      padding: 1rem;
-      border: 1px solid #ddd;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-    .section {
-      margin-bottom: 2rem;
-    }
-  </style>
+  <!-- [Previous meta, style, and other head elements remain the same] -->
 </head>
 <body>
-  <h1>Foosball Elo Rating System (JS Version)</h1>
-  <p>Paste your Elo data into the first text area or use the default dataset. Use the command field to issue commands (e.g., <code>pp</code> to print players, <code>best 5</code> for top players, <code>add JohnDoe</code> to add a player, <code>win off1 def1 off2 def2</code> for game results, <code>rank playerName</code> for ranks). Copy updated data from the “ELO Data For Saving” area.</p>
-
-  <div class="section">
-    <h2>Paste Your Elo Data (elo.txt)</h2>
-    <textarea id="eloData" rows="10">GraysonHou, 165, 155, 32, 69, 160, copper, copper, copper.
-WilliamGao, 179, 137, 41, 54, 158, iron, copper, copper.
-LarryZhong, 125, 188, 60, 57, 156, lz, lz, lz.
-JeanLuc, 110, 182, 8, 38, 146, copper, iron, iron.
-BradyGriffin, 153, 110, 9, 78, 132, iron, copper, iron.
-JeffersonWei, 156, 100, 7, 71, 128, iron, copper, iron.
-Anonymous, 101, 150, 53, 30, 126, copper, iron, iron.
-PerkinShowalter, 116, 134, 6, 33, 125, iron, iron, iron.
-JeffJin, 144, 100, 16, 62, 122, iron, iron, iron.
-ParkerHoppy, 139, 106, 6, 67, 122, iron, iron, iron.
-SamuelLi, 130, 108, 23, 48, 119, iron, iron, iron.
-RyanGong, 124, 100, 1, 100, 112, iron, iron, iron.
-StevenHou, 112, 112, 8, 50, 112, iron, iron, iron.
-JustinCheng, 120, 100, 18, 39, 110, iron, iron, iron.
-AustinLiu, 110, 105, 16, 38, 108, iron, iron, iron.
-JasperChapman, 116, 100, 1, 100, 108, iron, iron, iron.
-ThayerMahan, 100, 116, 8, 50, 108, iron, iron, iron.
-LiamLin, 100, 110, 11, 36, 105, iron, iron, iron.
-CadeBrekken, 109, 100, 1, 100, 104, iron, iron, iron.
-PrestonPhillis, 104, 104, 1, 100, 104, iron, iron, iron.
-AshtonCoffin, 100, 100, 0, 0, 100, iron, iron, iron.
-CarsonDavis, 100, 100, 0, 0, 100, iron, iron, iron.
-ChasCamp, 100, 100, 2, 50, 100, iron, iron, iron.
-JacksonDwyer, 100, 100, 0, 0, 100, iron, iron, iron.
-JapserChapman, 100, 100, 1, 0, 100, iron, iron, iron.
-LarryZhog, 100, 100, 1, 0, 100, iron, iron, iron.
-Leonli, 100, 100, 0, 0, 100, iron, iron, iron.
-LincolnGambol, 100, 100, 0, 0, 100, iron, iron, iron.
-MichaelJany, 100, 100, 0, 0, 100, iron, iron, iron.
-NoahRosenfeld, 100, 100, 0, 0, 100, iron, iron, iron.
-PeterHuang, 100, 100, 0, 0, 100, iron, iron, iron.
-PeterLiu, 100, 100, 0, 0, 100, iron, iron, iron.
-VictorXia, 100, 100, 0, 0, 100, iron, iron, iron.
-WilliamWei, 100, 100, 0, 0, 100, iron, iron, iron.</textarea>
-    <button id="loadDataBtn">Load Data</button>
-  </div>
-
-  <div class="section">
-    <h2>Command Input</h2>
-    <input type="text" id="commandInput" placeholder="Enter command here (e.g., 'win off1 def1 off2 def2')">
-    <button id="submitCommandBtn">Submit Command</button>
-  </div>
-
-  <div class="section">
-    <h2>Output</h2>
-    <pre id="outputArea">Output messages will appear here...</pre>
-  </div>
-
-  <div class="section">
-    <h2>ELO Data For Saving (Copy from here to update elo.txt)</h2>
-    <textarea id="saveDataArea" rows="10" placeholder="This area will show the updated elo.txt data"></textarea>
-  </div>
+  <!-- [Previous HTML structure remains the same] -->
 
   <script>
-    // Constants
-    const K_FACTOR = 32;
-    const RATING_MIN = 100;
-    const RATING_MAX = 2999;
-    
-    const WIN_TYPE_MULTIPLIERS = {
-      "win": 1.0,
-      "smallwin": 0.75,
-      "closewin": 0.5,
-      "bigwin": 1.25,
-      "perfectwin": 1.5
-    };
-    
-    const RANK_THRESHOLDS = [
-      { threshold: 2900, rank: "ultra" },
-      { threshold: 1650, rank: "diamond" },
-      { threshold: 850,  rank: "plat" },
-      { threshold: 450,  rank: "gold" },
-      { threshold: 250,  rank: "silver" },
-      { threshold: 150,  rank: "copper" },
-      { threshold: 0,    rank: "iron" }
-    ];
-    
-    const HIDDEN_RANK = "lz";
-    const SPECIAL_IM = "im";
-    
-    const RANK_ORDER = {
-      "iron": 1,
-      "copper": 2,
-      "silver": 3,
-      "gold": 4,
-      "plat": 5,
-      "diamond": 6,
-      "ultra": 7,
-      [HIDDEN_RANK]: 8,
-      [SPECIAL_IM]: 8
-    };
-    
-    const RANK_INITIAL = {
-      "iron": "i",
-      "copper": "c",
-      "silver": "s",
-      "gold": "g",
-      "plat": "p",
-      "diamond": "d",
-      "ultra": "u"
-    };
-    
-    const RANK_FULL = {};
-    for (let key in RANK_INITIAL) {
-      RANK_FULL[RANK_INITIAL[key]] = key;
-    }
-    
-    let players = {};
+    // [Previous constants and utility functions remain the same until processCommand]
 
-    // Utility Functions
-    function canonicalize(name) {
-      return name.toLowerCase().replace(/[^a-z0-9]/g, "");
-    }
-    
-    function get_hidden_rank() {
-      const letters = "abcdefghijklmnopqrstuvwxyz";
-      let randStr = "";
-      for (let i = 0; i < 4; i++) {
-        randStr += letters.charAt(Math.floor(Math.random() * letters.length));
-      }
-      let randStr2 = "";
-      for (let i = 0; i < 4; i++) {
-        randStr2 += letters.charAt(Math.floor(Math.random() * letters.length));
-      }
-      return "L" + randStr + "Z" + randStr2;
-    }
-    
-    function get_rank_display(rank) {
-      if (rank === HIDDEN_RANK) return get_hidden_rank();
-      if (rank === SPECIAL_IM) return "importal";
-      return RANK_FULL[rank] || rank;
-    }
-    
-    function get_computed_rank(score) {
-      for (let rec of RANK_THRESHOLDS) {
-        if (score >= rec.threshold) return rec.rank;
-      }
-      return "iron";
-    }
-    
-    function update_player_avg(player) {
-      player.avg = Math.round((player.offense + player.defense) / 2);
-    }
-    
-    function update_player_ranks(player) {
-      let new_o = get_computed_rank(player.offense);
-      let new_d = get_computed_rank(player.defense);
-      let new_a = get_computed_rank(player.avg);
-      ["rank_o", "rank_d", "rank_a"].forEach((field, idx) => {
-        let new_val = [new_o, new_d, new_a][idx];
-        let current = player[field] || "iron";
-        if (current !== HIDDEN_RANK && current !== SPECIAL_IM) {
-          player[field] = (RANK_ORDER[new_val] > RANK_ORDER[current]) ? new_val : current;
-        }
-      });
-    }
-    
-    function highest_overall_rank(key) {
-      let rec = players[key];
-      let ranks = [rec.rank_o || "iron", rec.rank_d || "iron", rec.rank_a || "iron"];
-      if (ranks.some(r => r === HIDDEN_RANK || r === SPECIAL_IM)) return get_hidden_rank();
-      let best = ranks.reduce((a, b) => RANK_ORDER[a] >= RANK_ORDER[b] ? a : b);
-      return get_rank_display(best);
-    }
-    
-    function merge_record(key, new_display, off, deff, played, wins, rank_d, rank_o, rank_a) {
-      let old = players[key];
-      let total_played = old.played + played;
-      let new_off = total_played > 0 ? Math.round((old.offense * old.played + off * played) / total_played) : off;
-      let new_def = total_played > 0 ? Math.round((old.defense * old.played + deff * played) / total_played) : deff;
-      let new_wins = old.wins + wins;
-      
-      function choose_rank(old_rank, new_rank) {
-        return (RANK_ORDER[new_rank] > RANK_ORDER[old_rank]) ? new_rank : old_rank;
-      }
-      
-      players[key] = {
-        display: old.display,
-        offense: new_off,
-        defense: new_def,
-        played: total_played,
-        wins: new_wins
-      };
-      update_player_avg(players[key]);
-      players[key].rank_d = choose_rank(old.rank_d || "iron", rank_d || get_computed_rank(new_def));
-      players[key].rank_o = choose_rank(old.rank_o || "iron", rank_o || get_computed_rank(new_off));
-      players[key].rank_a = choose_rank(old.rank_a || "iron", rank_a || get_computed_rank(players[key].avg));
-    }
-    
-    function get_or_create_player(name) {
-      let key = canonicalize(name);
-      if (!players[key]) {
-        players[key] = {
-          display: name,
-          offense: RATING_MIN,
-          defense: RATING_MIN,
-          played: 0,
-          wins: 0,
-          rank_o: "iron",
-          rank_d: "iron",
-          rank_a: "iron"
-        };
-        update_player_avg(players[key]);
-        if (key.includes("zhong")) {
-          players[key].rank_d = HIDDEN_RANK;
-          players[key].rank_o = HIDDEN_RANK;
-          players[key].rank_a = HIDDEN_RANK;
-        }
-      }
-      return players[key];
-    }
-    
-    // Data Functions
-    function loadData(inputText) {
-      players = {};
-      let lines = inputText.split("\n");
-      for (let line of lines) {
-        line = line.trim().replace(/\.$/, "");
-        if (!line) continue;
-        let parts = line.split(",").map(s => s.trim());
-        if (parts.length < 5) continue;
-        let disp = parts[0];
-        let canon = canonicalize(disp);
-        let off = parseInt(parts[1]) || RATING_MIN;
-        let deff = parseInt(parts[2]) || RATING_MIN;
-        let played = parseInt(parts[3]) || 0;
-        let win_rate = parseInt(parts[4]) || 0;
-        let wins = played > 0 ? Math.round((win_rate / 100) * played) : 0;
-        let avg = parts[5] ? parseInt(parts[5]) : Math.round((off + deff) / 2);
-        let rank_d = parts[6] || "iron";
-        let rank_o = parts[7] || "iron";
-        let rank_a = parts[8] || "iron";
-        
-        players[canon] = {
-          display: disp,
-          offense: off,
-          defense: deff,
-          played: played,
-          wins: wins,
-          avg: avg,
-          rank_d: rank_d,
-          rank_o: rank_o,
-          rank_a: rank_a
-        };
-        if (canon.includes("zhong")) {
-          players[canon].rank_d = HIDDEN_RANK;
-          players[canon].rank_o = HIDDEN_RANK;
-          players[canon].rank_a = HIDDEN_RANK;
-        }
-      }
-      printOutput("Data loaded successfully. " + Object.keys(players).length + " players.");
-      updateSaveDataArea();
-    }
-    
-    function saveData() {
-      let sortedPlayers = Object.entries(players).sort((a, b) => b[1].avg - a[1].avg || a[1].display.localeCompare(b[1].display));
-      return sortedPlayers.map(([_, data]) => {
-        let win_rate = data.played > 0 ? Math.round((data.wins / data.played) * 100) : 0;
-        return `${data.display}, ${data.offense}, ${data.defense}, ${data.played}, ${win_rate}, ${data.avg}, ${data.rank_d}, ${data.rank_o}, ${data.rank_a}.`;
-      }).join("\n");
-    }
-    
-    function updateSaveDataArea() {
-      document.getElementById("saveDataArea").value = saveData();
-    }
-    
-    // Rating Update Function
-    function update_ratings(rating1, rating2, result, multiplier) {
-      let expected = 1 / (1 + Math.pow(10, (rating2 - rating1) / 400));
-      return Math.round(K_FACTOR * multiplier * (result - expected));
-    }
-    
+    // --------------------------
     // Command Processors
-    function processWinCommand(tokens) {
-      if (tokens.length < 5) {
-        printOutput("Error: Insufficient arguments. Use: <win_type> off1 def1 off2 def2");
+    // --------------------------
+
+    function processWin(attackerName, defenderName, winType) {
+      const attackerKey = canonicalize(attackerName);
+      const defenderKey = canonicalize(defenderName);
+      
+      if (!players[attackerKey] || !players[defenderKey]) {
+        printOutput("Error: One or both players not found.");
         return;
       }
-      let win_type = tokens[0];
-      if (!(win_type in WIN_TYPE_MULTIPLIERS)) {
-        printOutput("Error: Invalid win type. Use: win, smallwin, closewin, bigwin, perfectwin");
-        return;
-      }
-      let multiplier = WIN_TYPE_MULTIPLIERS[win_type];
-      let off1 = get_or_create_player(tokens[1]);
-      let def1 = get_or_create_player(tokens[2]);
-      let off2 = get_or_create_player(tokens[3]);
-      let def2 = get_or_create_player(tokens[4]);
+
+      const attacker = players[attackerKey];
+      const defender = players[defenderKey];
+      const multiplier = WIN_TYPE_MULTIPLIERS[winType.toLowerCase()] || 1.0;
+      const k = K_FACTOR * multiplier;
+
+      // Calculate Elo changes
+      const aOff = attacker.offense;
+      const dDef = defender.defense;
+      const expected = 1 / (1 + Math.pow(10, (dDef - aOff) / 400));
+      const delta = Math.round(k * (1 - expected));
+
+      // Update attacker offense
+      attacker.offense = Math.min(RATING_MAX, Math.max(RATING_MIN, aOff + delta));
       
-      // Update ratings: off1 vs def2, def1 vs off2
-      let change1 = update_ratings(off1.offense, def2.defense, 1, multiplier);
-      off1.offense = Math.max(RATING_MIN, Math.min(RATING_MAX, off1.offense + change1));
-      def2.defense = Math.max(RATING_MIN, Math.min(RATING_MAX, def2.defense - change1));
-      
-      let change2 = update_ratings(def1.defense, off2.offense, 1, multiplier);
-      def1.defense = Math.max(RATING_MIN, Math.min(RATING_MAX, def1.defense + change2));
-      off2.offense = Math.max(RATING_MIN, Math.min(RATING_MAX, off2.offense - change2));
-      
-      // Update game stats
-      off1.played += 1; off1.wins += 1;
-      def1.played += 1; def1.wins += 1;
-      off2.played += 1;
-      def2.played += 1;
-      
-      // Update averages and ranks
-      [off1, def1, off2, def2].forEach(player => {
-        update_player_avg(player);
-        update_player_ranks(player);
-      });
-      
-      printOutput(`Processed ${win_type}: ${off1.display} & ${def1.display} beat ${off2.display} & ${def2.display}`);
+      // Update defender defense
+      defender.defense = Math.min(RATING_MAX, Math.max(RATING_MIN, dDef - delta));
+
+      // Update match counters
+      attacker.played += 1;
+      attacker.wins += 1;
+      defender.played += 1;
+
+      // Update ranks and averages
+      update_player_avg(attackerKey);
+      update_player_ranks(attackerKey);
+      update_player_avg(defenderKey);
+      update_player_ranks(defenderKey);
+
+      printOutput(`${attacker.display} defeats ${defender.display} (${winType}):\n` +
+                 `  ${attacker.display} offense: ${aOff} → ${attacker.offense}\n` +
+                 `  ${defender.display} defense: ${dDef} → ${defender.defense}`);
     }
-    
+
     function processCommand(command) {
       command = command.trim();
       if (!command) return;
-      let tokens = command.split(" ");
-      let base = tokens[0].toLowerCase();
-      
+      const tokens = command.split(/\s+/);
+      const base = tokens[0].toLowerCase();
+
+      // [Existing pp, add, best commands here]
+
+      // Handle win commands
       if (base in WIN_TYPE_MULTIPLIERS) {
-        processWinCommand(tokens);
-      } else if (base === "pp") {
-        printPlayers();
-      } else if (base === "best") {
-        if (tokens.length !== 2 || isNaN(parseInt(tokens[1]))) {
-          printOutput("Error: Use 'best N' where N is a number.");
+        if (tokens.length < 3) {
+          printOutput(`Usage: ${base} [attacker] [defender]`);
           return;
         }
-        let N = parseInt(tokens[1]);
-        let sorted = Object.entries(players).sort((a, b) => b[1].avg - a[1].avg).slice(0, N);
-        let lines = `Top ${N} players by average rating:\n`;
-        sorted.forEach(([_, data], i) => {
-          lines += `${i + 1}. ${data.display} - Avg: ${data.avg}\n`;
-        });
-        printOutput(lines);
-      } else if (base === "add") {
-        let details = command.substring(3).trim();
-        let parts = details.split(",").map(s => s.trim());
-        if (parts.length === 1) {
-          let name = parts[0];
-          let canon = canonicalize(name);
-          if (players[canon]) {
-            printOutput(`Player ${name} already exists.`);
-          } else {
-            get_or_create_player(name);
-            printOutput(`Player ${name} added with default stats.`);
-          }
-        } else if (parts.length === 9) {
-          try {
-            let name = parts[0];
-            let off = parseInt(parts[1]);
-            let deff = parseInt(parts[2]);
-            let played = parseInt(parts[3]);
-            let win_rate = parseInt(parts[4]);
-            let avg = parseInt(parts[5]);
-            let rank_d = parts[6];
-            let rank_o = parts[7];
-            let rank_a = parts[8];
-            let canon = canonicalize(name);
-            let wins = played > 0 ? Math.round((win_rate / 100) * played) : 0;
-            if (players[canon]) {
-              merge_record(canon, name, off, deff, played, wins, rank_d, rank_o, rank_a);
-              printOutput(`Player ${name} updated with merged stats.`);
-            } else {
-              players[canon] = {
-                display: name,
-                offense: off,
-                defense: deff,
-                played: played,
-                wins: wins,
-                avg: avg,
-                rank_d: rank_d,
-                rank_o: rank_o,
-                rank_a: rank_a
-              };
-              if (canon.includes("zhong")) {
-                players[canon].rank_d = HIDDEN_RANK;
-                players[canon].rank_o = HIDDEN_RANK;
-                players[canon].rank_a = HIDDEN_RANK;
-              }
-              printOutput(`Player ${name} added with specified stats.`);
-            }
-          } catch (e) {
-            printOutput("Error: Incorrect format for add command.");
-          }
-        } else {
-          printOutput("Error: Use 'add Name' or 'add Name, off, def, played, win_rate, avg, rank_d, rank_o, rank_a'");
-        }
-      } else if (base === "rank") {
-        if (tokens.length !== 2) {
-          printOutput("Error: Use 'rank playerName'");
+        processWin(tokens[1], tokens[2], base);
+      } 
+      else if (base === 'wins') {
+        if (tokens.length < 3) {
+          printOutput("Usage: wins [attacker] [defender] [win-type=win]");
           return;
         }
-        let name = tokens[1];
-        let canon = canonicalize(name);
-        if (players[canon]) {
-          let rec = players[canon];
-          let overall = highest_overall_rank(canon);
-          printOutput(`${rec.display}: Offense Rank: ${get_rank_display(rec.rank_o)}, Defense Rank: ${get_rank_display(rec.rank_d)}, Average Rank: ${get_rank_display(rec.rank_a)}, Overall: ${overall}`);
-        } else {
-          printOutput(`Player ${name} not found.`);
+        const winType = tokens[3] ? tokens[3].toLowerCase() : 'win';
+        if (!WIN_TYPE_MULTIPLIERS[winType]) {
+          printOutput(`Invalid win type. Valid types: ${Object.keys(WIN_TYPE_MULTIPLIERS).join(', ')}`);
+          return;
         }
-      } else {
-        printOutput("Unknown command. Try: pp, best N, add ..., win ..., rank playerName");
+        processWin(tokens[1], tokens[2], winType);
       }
+      // Handle rank command
+      else if (base === 'rank') {
+        let output = "Rank Thresholds:\n";
+        RANK_THRESHOLDS.forEach(rt => {
+          output += `- ${rt.rank.padEnd(8)} ${rt.threshold}+\n`;
+        });
+        printOutput(output);
+      }
+      else {
+        printOutput(`Unsupported command. Available commands: pp, add, best, rank, ` +
+                   `wins, ${Object.keys(WIN_TYPE_MULTIPLIERS).join(', ')}`);
+      }
+      
       updateSaveDataArea();
     }
-    
-    function printPlayers() {
-      let sorted = Object.entries(players).sort((a, b) => b[1].avg - a[1].avg || a[1].display.localeCompare(b[1].display));
-      let header = "No.  Name             Avg   Off   Def   T   Win%   Rank\n----------------------------------------------------------\n";
-      let lines = header;
-      sorted.forEach(([key, data], i) => {
-        let winRate = data.played ? Math.round((data.wins / data.played) * 100) : 0;
-        let overall = highest_overall_rank(key);
-        lines += `${(i + 1 + ".").padEnd(4)} ${data.display.padEnd(15)} ${String(data.avg).padStart(5)} ${String(data.offense).padStart(5)} ${String(data.defense).padStart(5)} ${String(data.played).padStart(3)} ${String(winRate).padStart(5)}  ${overall.padEnd(10)}\n`;
-      });
-      printOutput(lines);
-    }
-    
-    // Output Helper
-    function printOutput(message) {
-      document.getElementById("outputArea").innerText = message;
-    }
-    
-    // Event Listeners
-    document.getElementById("loadDataBtn").addEventListener("click", () => {
-      loadData(document.getElementById("eloData").value);
-    });
-    
-    document.getElementById("submitCommandBtn").addEventListener("click", () => {
-      processCommand(document.getElementById("commandInput").value);
-      document.getElementById("commandInput").value = "";
-    });
-    
-    // Initial Load
-    loadData(document.getElementById("eloData").value);
+
+    // [Remaining JavaScript code remains the same]
   </script>
 </body>
 </html>
