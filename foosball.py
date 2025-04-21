@@ -5,6 +5,13 @@ import re
 import random
 import string
 
+'''
+Foosball, also known as table soccer, has roots in late 19th-century Europe with patents for similar games filed in the 1890s.
+While various inventors experimented with tabletop soccer games, the first official foosball table was patented in 1921 by Harold Searles Thornton in the UK.
+He was inspired by the popularity of soccer and aimed to bring the excitement of the sport indoors.
+The game gained popularity in the 1960s and 1980s, particularly in the United States, and continues to be enjoyed today. 
+'''
+
 # Global constants
 FILE_NAME = "elo.txt"
 K_FACTOR = 32
