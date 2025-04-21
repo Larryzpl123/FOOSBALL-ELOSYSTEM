@@ -7,7 +7,7 @@ import re
 FILE_NAME = "elo.txt"
 K_FACTOR = 32
 RATING_MIN = 100   # default starting rating is 100
-RATING_MAX = 2999  # not passing PEAK
+RATING_MAX = 2999 #not passing PEAK
 
 # Multipliers for win types
 WIN_TYPE_MULTIPLIERS = {
@@ -93,6 +93,14 @@ def save_data():
             f.write(line)
 
 def print_players():
+    """
+    Print all player info sorted by descending average rating with ranks.
+    Format:
+      DisplayName, AverageRating, OffenseRating, DefenseRating, TimesPlayed, WinRate
+      1 - GraysonHou, A-133, O-154, D-112, T-11, R-64
+      2 - LarryZhong, A-132, O-115, D-150, T-20, R-60
+      ...
+    """
     if not players:
         print("No player data available.")
         return
@@ -122,22 +130,22 @@ def get_or_create_player(raw_name):
     return players[canon]
 
 def adjust_opponent_rating(opponent_rating, player_rating):
-    if opponent_rating == RATING_MIN and player_rating > 1500:
-        return 1500
+    if opponent_rating == RATING_MIN and player_rating > 150:
+        return 150
     return opponent_rating
 
 def update_rating(curr_rating, score, opposition_rating, multiplier):
     expected = 1 / (1 + math.pow(10, (adjust_opponent_rating(opposition_rating, curr_rating) - curr_rating) / 400))
     change = multiplier * K_FACTOR * (score - expected)
     if change < 0 and curr_rating <= RATING_MIN:
-        return RATING_MIN, 0  # Return min rating and no change
+        return RATING_MIN
     new_rating = curr_rating + change
     new_rating = round(new_rating)
     if new_rating < RATING_MIN:
         new_rating = RATING_MIN
     if new_rating > RATING_MAX:
         new_rating = RATING_MAX
-    return new_rating, change  # Return new rating and change
+    return new_rating
 
 def parse_team(team_str):
     team_str = team_str.strip()
@@ -150,27 +158,6 @@ def parse_team(team_str):
         defense_players = []
     return offense_players, defense_players
 
-def print_best_players():
-    if not players:
-        print("No player data available.")
-        return
-    
-    best_avg = max(players.items(), key=lambda kv: kv[1]["avg"])
-    best_offense = max(players.items(), key=lambda kv: kv[1]["offense"])
-    best_defense = max(players.items(), key=lambda kv: kv[1]["defense"])
-    most_played = max(players.items(), key=lambda kv: kv[1]["played"])
-    highest_win_rate = max(players.items(), key=lambda kv: (kv[1]["wins"] / kv[1]["played"]) if kv[1]["played"] > 0 else 0)
-
-    print("Best Players:")
-    print(f"Best Average: {best_avg[1]['display']} (A-{best_avg[1]['avg']})")
-    print(f"Best Offense: {best_offense[1]['display']} (O-{best_offense[1]['offense']})")
-    print(f"Best Defense: {best_defense[1]['display']} (D-{best_defense[1]['defense']})")
-    print(f"Most Time Played: {most_played[1]['display']} (T-{most_played[1]['played']})")
-    win_rate = (highest_win_rate[1]["wins"] / highest_win_rate[1]["played"]) * 100 if highest_win_rate[1]["played"] > 0 else 0
-    print(f"Highest Win Rate: {highest_win_rate[1]['display']} (R-{win_rate:.2f}%)")
-
-    #best
-
 def get_average_rating(names, role):
     if not names:
         return None
@@ -181,10 +168,6 @@ def get_average_rating(names, role):
         total += data[role]
         count += 1
     return total / count if count > 0 else 0
-
-def calculate_expected_win_rate(player_rating, opponent_rating):
-    expected = 1 / (1 + math.pow(10, (opponent_rating - player_rating) / 400))
-    return expected * 100  # Return as percentage
 
 def process_game(command):
     pattern = r"^(.*?)\s*(win|smallwin|closewin|bigwin|perfectwin)\s*(.*?)$"
@@ -200,116 +183,61 @@ def process_game(command):
     base_multiplier = WIN_TYPE_MULTIPLIERS[win_type]
     team1_off, team1_def = parse_team(team1_str)
     team2_off, team2_def = parse_team(team2_str)
-
-    # Create or get players
     for name in team1_off + team1_def + team2_off + team2_def:
         get_or_create_player(name)
-
-    # Determine average opponent ratings
+    team1_single = (len(team1_off) == 1 and len(team1_def) == 0)
+    team2_single = (len(team2_off) == 1 and len(team2_def) == 0)
     opp_for_team1 = get_average_rating(team2_def, "defense") if team2_def else get_average_rating(team2_off, "offense")
     opp_off_team1 = get_average_rating(team2_off, "offense") if team2_off else get_average_rating(team2_def, "defense")
     opp_for_team2 = get_average_rating(team1_def, "defense") if team1_def else get_average_rating(team1_off, "offense")
     opp_off_team2 = get_average_rating(team1_off, "offense") if team1_off else get_average_rating(team1_def, "defense")
-
-    # Update ratings for team 1
-    for name in team1_off:
+    if team1_single:
+        name = team1_off[0]
         player = get_or_create_player(name)
-        new_off, change_off = update_rating(player["offense"], 1, opp_for_team1 if opp_for_team1 is not None else 1500, base_multiplier)
+        eff_multiplier = base_multiplier * 0.5
+        new_off = update_rating(player["offense"], 1, opp_for_team1 if opp_for_team1 is not None else 1500, eff_multiplier)
+        new_def = update_rating(player["defense"], 1, opp_off_team1 if opp_off_team1 is not None else 1500, eff_multiplier)
         player["offense"] = new_off
+        player["defense"] = new_def
         player["played"] += 1
         player["wins"] += 1
-        print("--------------------------------------------------------------------------------")
-        print(f"{player['display']} - Off rate change: {change_off:.2f}")
-
-    for name in team1_def:
+    else:
+        for name in team1_off:
+            player = get_or_create_player(name)
+            new_off = update_rating(player["offense"], 1, opp_for_team1 if opp_for_team1 is not None else 1500, base_multiplier)
+            player["offense"] = new_off
+            player["played"] += 1
+            player["wins"] += 1
+        for name in team1_def:
+            player = get_or_create_player(name)
+            new_def = update_rating(player["defense"], 1, opp_off_team1 if opp_off_team1 is not None else 1500, base_multiplier)
+            player["defense"] = new_def
+            player["played"] += 1
+            player["wins"] += 1
+    if team2_single:
+        name = team2_off[0]
         player = get_or_create_player(name)
-        new_def, change_def = update_rating(player["defense"], 1, opp_off_team1 if opp_off_team1 is not None else 1500, base_multiplier)
-        player["defense"] = new_def
-        player["played"] += 1
-        print(f"{player['display']} - Def rate: {change_def:.2f}")
-
-    # Update ratings for team 2
-    for name in team2_off:
-        player = get_or_create_player(name)
-        new_off, change_off = update_rating(player["offense"], 0, opp_for_team2 if opp_for_team2 is not None else 1500, base_multiplier)
+        eff_multiplier = base_multiplier * 0.5
+        new_off = update_rating(player["offense"], 0, opp_for_team2 if opp_for_team2 is not None else 1500, eff_multiplier)
+        new_def = update_rating(player["defense"], 0, opp_off_team2 if opp_off_team2 is not None else 1500, eff_multiplier)
         player["offense"] = new_off
-        player["played"] += 1
-        print(f"{player['display']} - Off rate change: {change_off:.2f}")
-
-    for name in team2_def:
-        player = get_or_create_player(name)
-        new_def, change_def = update_rating(player["defense"], 0, opp_off_team2 if opp_off_team2 is not None else 1500, base_multiplier)
         player["defense"] = new_def
         player["played"] += 1
-        print(f"{player['display']} - Def rating change: {change_def:.2f}")
-
-    print("--------------------------------------------------------------------------------")
-
-    namelist1 = []
-    namelist2 = []
-    winrates1 = []
-    winrates2 = []
-
-    # Print expected win rates
-    for name in team1_off + team1_def:
-        player = players[canonicalize(name)]
-        expected_win_rate = calculate_expected_win_rate(player["offense"], opp_for_team1)
-        print(f"{player['display']}: {expected_win_rate:.2f}%")
-        namelist1.append(player['display'])  # Use f-string without quotes
-        winrates1.append(expected_win_rate)   # Store as a number
-
-    for name in team2_off + team2_def:
-        player = players[canonicalize(name)]
-        expected_win_rate = calculate_expected_win_rate(player["defense"], opp_off_team2)
-        print(f"{player['display']}: {expected_win_rate:.2f}%")
-        namelist2.append(player['display'])  # Use f-string without quotes
-        winrates2.append(expected_win_rate)   # Store as a number
-
-    print("--------------------------------------------------------------------------------")
-
-    # Calculate average win rates
-    le1 = len(winrates1)
-    if le1 == 2:
-        avg_winrate1 = (winrates1[0] + winrates1[1]) / 2
     else:
-        avg_winrate1 = winrates1[0]  # Only one player
-
-    le2 = len(winrates2)
-    if le2 == 2:
-        avg_winrate2 = (winrates2[0] + winrates2[1]) / 2
-    else:
-        avg_winrate2 = winrates2[0]  # Only one player
-
-    # Prepare team names for printing
-    team1_display = f"{namelist1[0]} + {namelist1[1]}" if le1 == 2 else namelist1[0]
-    team2_display = f"{namelist2[0]} + {namelist2[1]}" if le2 == 2 else namelist2[0]
-
-    print(f"{team1_display} = {avg_winrate1:.2f}% vs {team2_display} = {avg_winrate2:.2f}%")
-
-    print("--------------------------------------------------------------------------------")
-
-
+        for name in team2_off:
+            player = get_or_create_player(name)
+            new_off = update_rating(player["offense"], 0, opp_for_team2 if opp_for_team2 is not None else 1500, base_multiplier)
+            player["offense"] = new_off
+            player["played"] += 1
+        for name in team2_def:
+            player = get_or_create_player(name)
+            new_def = update_rating(player["defense"], 0, opp_off_team2 if opp_off_team2 is not None else 1500, base_multiplier)
+            player["defense"] = new_def
+            player["played"] += 1
     for key in players:
         update_player_avg(key)
-
     save_data()
     print("Game processed and ratings updated.")
-
-def print_players_alphabetically():
-    if not players:
-        print("No player data available.")
-        return
-    
-    sorted_list = sorted(players.items(), key=lambda kv: kv[1]["display"].lower())
-    print("DisplayName, AverageRating, OffenseRating, DefenseRating, TimesPlayed, WinRate")
-    print("Rating from 100 to 2999")
-    for (key, data) in sorted_list:
-        played = data["played"]
-        wins = data["wins"]
-        win_rate = round((wins / played) * 100) if played > 0 else 0
-        player_str = f"{data['display']}, A-{data['avg']}, O-{data['offense']}, D-{data['defense']}, T-{played}, R-{win_rate}"
-        print(player_str)
-
 
 def main():
     load_data()
@@ -326,10 +254,6 @@ def main():
             break
         elif command.lower() == "pp":
             print_players()
-        elif command.lower() == "best":
-            print_best_players()
-        elif command.lower() == "name":
-            print_players_alphabetically()
         elif command == "":
             continue
         else:
