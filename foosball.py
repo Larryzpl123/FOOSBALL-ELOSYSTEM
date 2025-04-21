@@ -57,8 +57,11 @@ RANK_INITIAL = {
     "plat": "p",
     "diamond": "d",
     "ultra": "u"
-    # Hidden rank is not directly mapped because we always generate it.
 }
+
+# Create an inverse dictionary to convert an initial letter back to a full rank name.
+# This will be used when printing.
+RANK_FULL = {v: k for k, v in RANK_INITIAL.items()}
 
 # Data structure for player records.
 # Each record: display, offense, defense, played, wins, avg, rank_o, rank_d, rank_a.
@@ -81,15 +84,20 @@ def get_hidden_rank():
 
 def get_rank_display(rank):
     """
-    Converts a stored rank (e.g., iron, copper, etc.) to its initial letter.
+    Converts a stored rank value to its display value.
     If the rank is hidden (HIDDEN_RANK), returns a generated hidden rank string.
-    Also handles the special im flag.
+    If the rank is the special "im" flag, returns "importal".
+    Otherwise, if the stored rank is an abbreviation (e.g. "i") then convert it to the full rank name.
+    If not, return rank as-is.
     """
     if rank == HIDDEN_RANK:
         return get_hidden_rank()
     if rank == SPECIAL_IM:
         return "importal"
-    return RANK_INITIAL.get(rank, rank)
+    # If the stored rank is an abbreviation, convert using our inverse mapping.
+    if rank in RANK_FULL:
+        return RANK_FULL[rank]
+    return rank
 
 def get_computed_rank(score):
     """Compute the rank (as a full string) for a given score based on thresholds."""
@@ -106,7 +114,7 @@ def update_player_avg(key):
 def update_player_ranks(key):
     """
     Update stored rank fields for offense, defense, and average.
-    Ranks never drop – if a new computed rank is higher (by order) than stored, update.
+    Ranks never drop -- if a new computed rank is higher (by order) than stored, update.
     """
     rec = players[key]
     new_o = get_computed_rank(rec["offense"])
@@ -324,53 +332,84 @@ def print_best_players():
     win_rate = (highest_win_rate[1]["wins"] / played) * 100 if played > 0 else 0
     print(f"  Highest Win Rate: {highest_win_rate[1]['display']} (R-{win_rate:.2f}%)")
 
-# --- Command processing functions ---
+def print_rank_cmd(crit):
+    """
+    Process the 'rank' command given a criteria.
+    Supported criteria:
+       a      -> rank by average (show stored average value and rank_a)
+       o      -> rank by offense (show offense value and rank_o)
+       d      -> rank by defense (show defense value and rank_d)
+       t      -> rank by times played
+       r      -> rank by win rate
+       a-rank -> rank by stored average rank (and similarly for o-rank, d-rank)
+       
+    If a player's stored rank is hidden (HIDDEN_RANK), display the row number as 0.
+    """
+    if crit == "a":
+        sorted_list = sorted(players.items(), key=lambda kv: (-kv[1]["avg"], kv[1]["display"]))
+        header = f"{'No.':<3}  {'Name':<15}  {'Average':>7}  {'Rank_A':<10}"
+        def value_func(item):
+            return item[1]["avg"]
+        def rank_val(item):
+            return item[1].get("rank_a", "iron")
+    elif crit == "o":
+        sorted_list = sorted(players.items(), key=lambda kv: (-kv[1]["offense"], kv[1]["display"]))
+        header = f"{'No.':<3}  {'Name':<15}  {'Offense':>7}  {'Rank_O':<10}"
+        def value_func(item):
+            return item[1]["offense"]
+        def rank_val(item):
+            return item[1].get("rank_o", "iron")
+    elif crit == "d":
+        sorted_list = sorted(players.items(), key=lambda kv: (-kv[1]["defense"], kv[1]["display"]))
+        header = f"{'No.':<3}  {'Name':<15}  {'Defense':>7}  {'Rank_D':<10}"
+        def value_func(item):
+            return item[1]["defense"]
+        def rank_val(item):
+            return item[1].get("rank_d", "iron")
+    elif crit == "t":
+        sorted_list = sorted(players.items(), key=lambda kv: (-kv[1]["played"], kv[1]["display"]))
+        header = f"{'No.':<3}  {'Name':<15}  {'Played':>7}"
+        def value_func(item):
+            return item[1]["played"]
+        def rank_val(item):
+            return ""
+    elif crit == "r":
+        sorted_list = sorted(players.items(), key=lambda kv: (-(kv[1]["wins"]/kv[1]["played"]) if kv[1]["played"] else 0, kv[1]["display"]))
+        header = f"{'No.':<3}  {'Name':<15}  {'Win%':>7}"
+        def value_func(item):
+            played = item[1]["played"]
+            return round((item[1]["wins"] / played) * 100) if played > 0 else 0
+        def rank_val(item):
+            return ""
+    elif crit in ("a-rank", "o-rank", "d-rank"):
+        field = {"a-rank": "rank_a", "o-rank": "rank_o", "d-rank": "rank_d"}[crit]
+        sorted_list = sorted(players.items(), key=lambda kv: (-RANK_ORDER.get(kv[1].get(field, "iron"), 1), -kv[1]["avg"], kv[1]["display"]))
+        header = f"{'No.':<3}  {'Name':<15}  {field.upper():<10}"
+        def value_func(item):
+            return ""
+        def rank_val(item):
+            return item[1].get(field, "iron")
+    else:
+        print("Unsupported rank criteria.")
+        return
 
-def parse_team(team_str):
-    """
-    Dummy implementation for parsing a team string into offense and defense lists.
-    Here we assume names separated by semicolons (;) represent two groups.
-    In a real scenario, you would further split offense and defense.
-    """
-    # Split on the semicolon if given; otherwise, assume all names are offense.
-    if ";" in team_str:
-        names = [x.strip() for x in team_str.split(";")]
-        # For simplicity, treat the first name as offense and the rest as defense.
-        if names:
-            offense = [names[0]]
-            defense = names[1:]
+    print(header)
+    print("-" * len(header))
+    # Instead of using enumerate directly, if a player has hidden rank (HIDDEN_RANK)
+    # we print its row number as 0.
+    ordinal = 1
+    for key, data in sorted_list:
+        stored_rank = rank_val((key, data))
+        display_rank = get_rank_display(stored_rank) if stored_rank else ""
+        num = "0" if stored_rank == HIDDEN_RANK else str(ordinal)
+        if crit in ("a", "o", "d"):
+            print(f"{num:<3}  {data['display']:<15}  {value_func((key, data)):>7}  {display_rank:<10}")
+        elif crit in ("t", "r"):
+            print(f"{num:<3}  {data['display']:<15}  {value_func((key, data)):>7}")
         else:
-            offense, defense = [], []
-    else:
-        offense = [team_str.strip()] if team_str.strip() else []
-        defense = []
-    return offense, defense
-
-def update_rating(current, win, opponent_rating, multiplier):
-    """
-    Dummy rating updater. In a real Elo system you would compute an expected score etc.
-    Here we simply add a constant K_FACTOR (modified by multiplier) if win, subtract if not.
-    """
-    change = round(K_FACTOR * multiplier)
-    if win:
-        return current + change, change
-    else:
-        return current - change, -change
-
-def get_average_rating(names, rating_type):
-    """
-    Compute the average rating (offense or defense) for a list of players.
-    Returns None if the list is empty.
-    """
-    if not names:
-        return None
-    total = 0
-    count = 0
-    for name in names:
-        player = get_or_create_player(name)
-        total += player[rating_type]
-        count += 1
-    return total // count if count else None
+            print(f"{num:<3}  {data['display']:<15}  {display_rank:<10}")
+        if stored_rank != HIDDEN_RANK:
+            ordinal += 1
 
 def process_game(command):
     """
@@ -389,6 +428,17 @@ def process_game(command):
         print("Invalid win type.")
         return
     base_multiplier = WIN_TYPE_MULTIPLIERS[win_type]
+    # For simplicity, teams are parsed by separating on semicolon.
+    def parse_team(team_str):
+        if ";" in team_str:
+            names = [x.strip() for x in team_str.split(";")]
+            offense = [names[0]] if names else []
+            defense = names[1:] if len(names) > 1 else []
+        else:
+            offense = [team_str.strip()] if team_str.strip() else []
+            defense = []
+        return offense, defense
+
     team1_off, team1_def = parse_team(team1_str)
     team2_off, team2_def = parse_team(team2_str)
 
@@ -397,10 +447,29 @@ def process_game(command):
         get_or_create_player(name)
 
     # Compute opponent rating averages
+    def get_average_rating(names, rating_type):
+        if not names:
+            return None
+        total = 0
+        count = 0
+        for name in names:
+            player = get_or_create_player(name)
+            total += player[rating_type]
+            count += 1
+        return total // count if count else None
+
     opp_for_team1 = get_average_rating(team2_def, "defense") if team2_def else get_average_rating(team2_off, "offense")
     opp_off_team1 = get_average_rating(team2_off, "offense") if team2_off else get_average_rating(team2_def, "defense")
     opp_for_team2 = get_average_rating(team1_def, "defense") if team1_def else get_average_rating(team1_off, "offense")
     opp_off_team2 = get_average_rating(team1_off, "offense") if team1_off else get_average_rating(team1_def, "defense")
+
+    # Dummy rating updater: add or subtract a constant modified by multiplier.
+    def update_rating(current, win, opponent_rating, multiplier):
+        change = round(K_FACTOR * multiplier)
+        if win:
+            return current + change, change
+        else:
+            return current - change, -change
 
     # Update winning team (team1)
     for name in team1_off:
@@ -507,95 +576,6 @@ def process_combine(command):
     print(f"Players {name1} and {name2} combined.")
     save_data()
 
-def process_rank_cmd(command):
-    """
-    Process the 'rank' command.
-    Format: rank <criteria>
-    Criteria can be:
-       a      -> rank by average (show stored average value and rank_a)
-       o      -> rank by offense (show offense value and rank_o)
-       d      -> rank by defense (show defense value and rank_d)
-       t      -> rank by times played
-       r      -> rank by win rate
-       a-rank -> rank by stored average rank (and similarly for o-rank, d-rank)
-       
-    Additionally, if a player's stored rank is hidden (HIDDEN_RANK),
-    display the row number as 0 instead of its ordinal placement.
-    """
-    tokens = command.split()
-    if len(tokens) != 2:
-        print("Rank command requires a single criteria parameter (e.g., rank a).")
-        return
-    crit = tokens[1].lower()
-    # Prepare sorting, header labels, and value functions
-    if crit == "a":
-        sorted_list = sorted(players.items(), key=lambda kv: (-kv[1]["avg"], kv[1]["display"]))
-        header = f"{'No.':<3}  {'Name':<15}  {'Average':>7}  {'Rank_A':<10}"
-        def value_func(item):
-            return item[1]["avg"]
-        def rank_val(item):
-            return item[1].get("rank_a", "iron")
-    elif crit == "o":
-        sorted_list = sorted(players.items(), key=lambda kv: (-kv[1]["offense"], kv[1]["display"]))
-        header = f"{'No.':<3}  {'Name':<15}  {'Offense':>7}  {'Rank_O':<10}"
-        def value_func(item):
-            return item[1]["offense"]
-        def rank_val(item):
-            return item[1].get("rank_o", "iron")
-    elif crit == "d":
-        sorted_list = sorted(players.items(), key=lambda kv: (-kv[1]["defense"], kv[1]["display"]))
-        header = f"{'No.':<3}  {'Name':<15}  {'Defense':>7}  {'Rank_D':<10}"
-        def value_func(item):
-            return item[1]["defense"]
-        def rank_val(item):
-            return item[1].get("rank_d", "iron")
-    elif crit == "t":
-        sorted_list = sorted(players.items(), key=lambda kv: (-kv[1]["played"], kv[1]["display"]))
-        header = f"{'No.':<3}  {'Name':<15}  {'Played':>7}"
-        def value_func(item):
-            return item[1]["played"]
-        def rank_val(item):
-            return ""
-    elif crit == "r":
-        sorted_list = sorted(players.items(), key=lambda kv: (-(kv[1]["wins"]/kv[1]["played"]) if kv[1]["played"] else 0, kv[1]["display"]))
-        header = f"{'No.':<3}  {'Name':<15}  {'Win%':>7}"
-        def value_func(item):
-            played = item[1]["played"]
-            return round((item[1]["wins"] / played) * 100) if played > 0 else 0
-        def rank_val(item):
-            return ""
-    elif crit in ("a-rank", "o-rank", "d-rank"):
-        field = {"a-rank": "rank_a", "o-rank": "rank_o", "d-rank": "rank_d"}[crit]
-        sorted_list = sorted(players.items(), key=lambda kv: (-RANK_ORDER.get(kv[1].get(field, "iron"), 1), -kv[1]["avg"], kv[1]["display"]))
-        header = f"{'No.':<3}  {'Name':<15}  {field.upper():<10}"
-        def value_func(item):
-            return ""
-        def rank_val(item):
-            return item[1].get(field, "iron")
-    else:
-        print("Unsupported rank criteria.")
-        return
-
-    print(header)
-    print("-" * len(header))
-    # Instead of using enumerate directly, if a player has hidden rank (HIDDEN_RANK)
-    # we print its row number as 0.
-    ordinal = 1
-    for key, data in sorted_list:
-        stored_rank = rank_val((key, data))
-        display_rank = get_rank_display(stored_rank) if stored_rank else ""
-        # Determine row number: if rank is hidden, always 0; else show the ordinal.
-        num = "0" if stored_rank == HIDDEN_RANK else str(ordinal)
-        if crit in ("a", "o", "d"):
-            print(f"{num:<3}  {data['display']:<15}  {value_func((key, data)):>7}  {display_rank:<10}")
-        elif crit in ("t", "r"):
-            print(f"{num:<3}  {data['display']:<15}  {value_func((key, data)):>7}")
-        else:
-            print(f"{num:<3}  {data['display']:<15}  {display_rank:<10}")
-        # Only increment ordinal for non-hidden players.
-        if stored_rank != HIDDEN_RANK:
-            ordinal += 1
-
 # --- Main command loop ---
 
 def main():
@@ -627,7 +607,11 @@ def main():
         elif command.lower().startswith("combine"):
             process_combine(command)
         elif command.lower().startswith("rank"):
-            process_rank_cmd(command)
+            tokens = command.split()
+            if len(tokens) == 2:
+                process_rank_cmd(tokens[1].lower())
+            else:
+                print("Rank command requires a single criteria (e.g., rank a).")
         elif command == "":
             continue
         else:
