@@ -143,6 +143,30 @@ def highest_overall_rank(key):
     best = max(ranks, key=lambda r: RANK_ORDER.get(r, 1))
     return get_rank_display(best)
 
+def get_rank_order(rank):
+    """Get the order of a rank, handling both full names and abbreviations."""
+    if rank in RANK_ORDER:
+        return RANK_ORDER[rank]
+    elif rank in RANK_FULL:
+        full_rank = RANK_FULL[rank]
+        return RANK_ORDER.get(full_rank, 1)
+    else:
+        return 1  # default to lowest
+
+def get_rank_indicator(key):
+    """Determine the indicator (o), (d), or (a) based on offense and defense ranks."""
+    rec = players[key]
+    rank_o = rec.get("rank_o", "iron")
+    rank_d = rec.get("rank_d", "iron")
+    order_o = get_rank_order(rank_o)
+    order_d = get_rank_order(rank_d)
+    if order_o > order_d:
+        return "(o)"
+    elif order_d > order_o:
+        return "(d)"
+    else:
+        return "(a)"
+
 def merge_record(key, new_display, off, deff, played, wins, rank_d=None, rank_o=None, rank_a=None):
     """
     Merge new record data into an existing record (weighted average by times played).
@@ -276,7 +300,7 @@ def save_data():
 def print_players():
     """
     Print player info (sorted by average descending) with aligned columns.
-    Also shows the overall rank (using highest_overall_rank).
+    Also shows the overall rank with an indicator (o), (d), or (a).
     """
     if not players:
         print("No player data available.")
@@ -286,7 +310,7 @@ def print_players():
         update_player_avg(key)
         update_player_ranks(key)
     sorted_list = sorted(players.items(), key=lambda kv: (-kv[1]["avg"], kv[1]["display"]))
-    header = f"{'No.':<3}  {'Name':<15}  {'Avg':>5}  {'Off':>5}  {'Def':>5}  {'T':>3}  {'Win%':>5}  {'Rank':<10}"
+    header = f"{'No.':<3}  {'Name':<15}  {'Avg':>5}  {'Off':>5}  {'Def':>5}  {'T':>3}  {'Win%':>5}  {'Rank (Highest a/o/d)':<15}"
     print(header)
     print("-" * len(header))
     for idx, (key, data) in enumerate(sorted_list, start=1):
@@ -294,7 +318,9 @@ def print_players():
         wins = data["wins"]
         win_rate = round((wins / played) * 100) if played > 0 else 0
         overall_rank = highest_overall_rank(key)
-        print(f"{idx:<3}  {data['display']:<15}  {data['avg']:>5}  {data['offense']:>5}  {data['defense']:>5}  {played:>3}  {win_rate:>5}  {overall_rank:<10}")
+        indicator = get_rank_indicator(key)
+        rank_display = overall_rank + indicator
+        print(f"{idx:<3}  {data['display']:<15}  {data['avg']:>5}  {data['offense']:>5}  {data['defense']:>5}  {played:>3}  {win_rate:>5}  {rank_display:<15}")
 
 def print_players_alphabetically():
     """Print players sorted alphabetically."""
@@ -309,6 +335,7 @@ def print_players_alphabetically():
         played = data["played"]
         wins = data["wins"]
         win_rate = round((wins / played) * 100) if played > 0 else 0
+        
         print(f"{data['display']:<15}  {data['avg']:>5}  {data['offense']:>5}  {data['defense']:>5}  {played:>3}  {win_rate:>5}")
 
 def print_best_players():
@@ -609,7 +636,7 @@ def main():
         elif command.lower().startswith("rank"):
             tokens = command.split()
             if len(tokens) == 2:
-                process_rank_cmd(tokens[1].lower())
+                print_rank_cmd(tokens[1].lower())
             else:
                 print("Rank command requires a single criteria (e.g., rank a).")
         elif command == "":

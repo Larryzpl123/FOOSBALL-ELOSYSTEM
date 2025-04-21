@@ -1,7 +1,7 @@
 GraysonHou, 165, 155, 32, 69, 160, copper, copper, copper.
 WilliamGao, 179, 137, 41, 54, 158, iron, copper, copper.
 LarryZhong, 125, 188, 60, 57, 156, lz, lz, lz.
-Jean-Luc, 110, 182, 8, 38, 146, copper, iron, iron.
+JeanLuc, 110, 182, 8, 38, 146, copper, iron, iron.
 BradyGriffin, 153, 110, 9, 78, 132, iron, copper, iron.
 JeffersonWei, 156, 100, 7, 71, 128, iron, copper, iron.
 Anonymous, 101, 150, 53, 30, 126, copper, iron, iron.
@@ -23,7 +23,6 @@ CarsonDavis, 100, 100, 0, 0, 100, iron, iron, iron.
 ChasCamp, 100, 100, 2, 50, 100, iron, iron, iron.
 JacksonDwyer, 100, 100, 0, 0, 100, iron, iron, iron.
 JapserChapman, 100, 100, 1, 0, 100, iron, iron, iron.
-LarryZhog, 100, 100, 1, 0, 100, iron, iron, iron.
 Leonli, 100, 100, 0, 0, 100, iron, iron, iron.
 LincolnGambol, 100, 100, 0, 0, 100, iron, iron, iron.
 MichaelJany, 100, 100, 0, 0, 100, iron, iron, iron.

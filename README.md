@@ -1,7 +1,3 @@
-A simple foosball elo-system.
-
-<a href="https://larryzpl123.github.io/FOOSBALL-ELOSYSTEM/">Try this html version</a>
-
 Name Normalization & Merging: <br />
 “LarryZhong”, “Larry Zhong”, “Larry_Zhong”, etc., are merged automatically. <br />
 
