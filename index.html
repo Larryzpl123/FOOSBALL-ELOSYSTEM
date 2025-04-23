@@ -1,532 +1,110 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+<a href="2index.html">Link to functional html</a>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Foosball Elo Rating System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foosball Ranking Board</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        h1, h2 { color: #333; }
-        table { border-collapse: collapse; margin: 10px 0; }
-        th, td { border: 1px solid #333; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        input, textarea, select { margin: 5px; padding: 5px; }
-        button { padding: 5px 10px; margin: 5px; }
-        .section { margin-bottom: 20px; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        th:hover {
+            background-color: #45a049;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
     </style>
 </head>
 <body>
-    <h1>Foosball Elo Rating System</h1>
-    <div class="section">
-        <h2>Load Data</h2>
-        <textarea id="data-input" rows="10" cols="50" placeholder="Paste data here (e.g., JustinCheng, 100, 100, 0, 0)"></textarea>
-        <br/>
-        <button onclick="loadPastedData()">Load Data</button>
-        <br/>
-        <font color="red"> scroll to bottom for example dataset for testing <front/>
+    <div class="container">
+        <h1>Foosball Ranking Board</h1>
+        <table id="rankingTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)">Name</th>
+                    <th onclick="sortTable(1)">Offense Points</th>
+                    <th onclick="sortTable(2)">Defense Points</th>
+                    <th onclick="sortTable(3)">Times Played</th>
+                    <th onclick="sortTable(4)">Win Rate (%)</th>
+                    <th onclick="sortTable(5)">Average Points</th>
+                    <th onclick="sortTable(6)">Defense Rank</th>
+                    <th onclick="sortTable(7)">Offense Rank</th>
+                    <th onclick="sortTable(8)">Average Rank</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+        </table>
     </div>
-    <div class="section">
-        <h2>Player Statistics</h2>
-        <div id="player-list"></div>
-    </div>
-    <div class="section">
-        <h2>Enter Commands</h2>
-        <input type="text" id="command-input" size="50" placeholder="e.g., a;b closewin c;d">
-        <button onclick="processCommand()">Process Command</button>
-        <br/>
-        <font color="black">
-        pp - print player stats <br/>
-        best - best players <br/>
-        teama typewin teamb - (type: closewin, smallwin, win, bigwin, perfectwin) <br/>
-        name - print player names alphabetically <br/>
-        add - add new player <br/>
-        combine - combine two players stats <br/>
-        rank a/o/d - rank by average / offense / defense <br/>
-    </div>
+
     <script>
-        // Constants
-        const K_FACTOR = 32;
-        const RATING_MIN = 100;
-        const RATING_MAX = 2999;
-        const WIN_TYPE_MULTIPLIERS = {
-            "win": 1.0,
-            "smallwin": 0.75,
-            "closewin": 0.5,
-            "bigwin": 1.25,
-            "perfectwin": 1.5
-        };
-        const RANK_THRESHOLDS = [
-            [2900, "ultra"],
-            [1650, "diamond"],
-            [850, "plat"],
-            [450, "gold"],
-            [250, "silver"],
-            [150, "copper"],
-            [0, "iron"]
-        ];
-        const HIDDEN_RANK = "lz";
-        const SPECIAL_IM = "im";
-        const RANK_ORDER = {
-            "iron": 1,
-            "copper": 2,
-            "silver": 3,
-            "gold": 4,
-            "plat": 5,
-            "diamond": 6,
-            "ultra": 7,
-            [HIDDEN_RANK]: 8,
-            [SPECIAL_IM]: 8
-        };
-        const RANK_INITIAL = {
-            "iron": "i",
-            "copper": "c",
-            "silver": "s",
-            "gold": "g",
-            "plat": "p",
-            "diamond": "d",
-            "ultra": "u"
-        };
-        const RANK_FULL = Object.fromEntries(Object.entries(RANK_INITIAL).map(([k, v]) => [v, k]));
-
-        let players = {};
-
-        // Utility Functions
-        function canonicalize(name) {
-            return name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        }
-
-        function getHiddenRank() {
-            const letters = 'abcdefghijklmnopqrstuvwxyz';
-            return 'L' + Array(4).fill().map(() => letters[Math.floor(Math.random() * letters.length)]).join('') + 
-                   'Z' + Array(4).fill().map(() => letters[Math.floor(Math.random() * letters.length)]).join('');
-        }
-
-        function getRankDisplay(rank) {
-            if (rank === HIDDEN_RANK) return getHiddenRank();
-            if (rank === SPECIAL_IM) return "importal";
-            return RANK_FULL[rank] || rank;
-        }
-
-        function getComputedRank(score) {
-            for (let [threshold, rank] of RANK_THRESHOLDS) {
-                if (score >= threshold) return rank;
-            }
-            return "iron";
-        }
-
-        function updatePlayerAvg(key) {
-            let data = players[key];
-            data.avg = Math.round((data.offense + data.defense) / 2);
-        }
-
-        function updatePlayerRanks(key) {
-            let rec = players[key];
-            let new_o = getComputedRank(rec.offense);
-            let new_d = getComputedRank(rec.defense);
-            let new_a = getComputedRank(rec.avg);
-            for (let [field, new_val] of [["rank_o", new_o], ["rank_d", new_d], ["rank_a", new_a]]) {
-                let current = rec[field] || "iron";
-                if (current === HIDDEN_RANK || current === SPECIAL_IM) continue;
-                rec[field] = RANK_ORDER[new_val] > RANK_ORDER[current] ? new_val : current;
-            }
-        }
-
-        function highestOverallRank(key) {
-            let rec = players[key];
-            let ranks = [rec.rank_o || "iron", rec.rank_d || "iron", rec.rank_a || "iron"];
-            if (ranks.some(r => r === HIDDEN_RANK || r === SPECIAL_IM)) return getHiddenRank();
-            let best = ranks.reduce((a, b) => RANK_ORDER[a] > RANK_ORDER[b] ? a : b);
-            return getRankDisplay(best);
-        }
-
-        function mergeRecord(key, new_display, off, deff, played, wins, rank_d = null, rank_o = null, rank_a = null) {
-            let old = players[key];
-            let total_played = old.played + played;
-            let new_off = total_played > 0 ? Math.round((old.offense * old.played + off * played) / total_played) : off;
-            let new_def = total_played > 0 ? Math.round((old.defense * old.played + deff * played) / total_played) : deff;
-            let new_wins = old.wins + wins;
-            const chooseRank = (old_r, new_r) => RANK_ORDER[new_r || getComputedRank(new_r ? off : new_off)] > RANK_ORDER[old_r] ? new_r : old_r;
-            players[key] = {
-                display: old.display,
-                offense: new_off,
-                defense: new_def,
-                played: total_played,
-                wins: new_wins,
-                avg: Math.round((new_off + new_def) / 2),
-                rank_d: chooseRank(old.rank_d || "iron", rank_d),
-                rank_o: chooseRank(old.rank_o || "iron", rank_o),
-                rank_a: chooseRank(old.rank_a || "iron", rank_a)
-            };
-        }
-
-        // Player Creation
-        function getOrCreatePlayer(name) {
-            let key = canonicalize(name);
-            if (!players[key]) {
-                players[key] = {
-                    display: name,
-                    offense: RATING_MIN,
-                    defense: RATING_MIN,
-                    played: 0,
-                    wins: 0,
-                    avg: RATING_MIN,
-                    rank_o: "iron",
-                    rank_d: "iron",
-                    rank_a: "iron"
-                };
-                if (key.includes("zhong")) {
-                    players[key].rank_o = HIDDEN_RANK;
-                    players[key].rank_d = HIDDEN_RANK;
-                    players[key].rank_a = HIDDEN_RANK;
-                }
-            }
-            return players[key];
-        }
-
-        // Data Loading
-        function loadPastedData() {
-            let text = document.getElementById("data-input").value;
-            players = {};
-            text.split('\n').forEach(line => {
-                line = line.trim().replace(/\.$/, '');
-                if (!line) return;
-                let parts = line.split(',').map(p => p.trim());
-                if (parts.length < 5) return;
-                let [disp, off, deff, played, win_rate] = parts;
-                let canon = canonicalize(disp);
-                try {
-                    off = parseInt(off);
-                    deff = parseInt(deff);
-                    played = parseInt(played);
-                    win_rate = parseInt(win_rate);
-                    let wins = played > 0 ? Math.round((win_rate / 100) * played) : 0;
-                    let avg = parts[5] ? parseInt(parts[5]) : Math.round((off + deff) / 2);
-                    let rank_d = parts[6] || getComputedRank(deff);
-                    let rank_o = parts[7] || getComputedRank(off);
-                    let rank_a = parts[8] || getComputedRank(avg);
-                    if (players[canon]) {
-                        mergeRecord(canon, disp, off, deff, played, wins, rank_d, rank_o, rank_a);
-                    } else {
-                        players[canon] = { display: disp, offense: off, defense: deff, played, wins, avg, rank_d, rank_o, rank_a };
-                        if (canon.includes("zhong")) {
-                            players[canon].rank_d = HIDDEN_RANK;
-                            players[canon].rank_o = HIDDEN_RANK;
-                            players[canon].rank_a = HIDDEN_RANK;
-                        }
-                    }
-                } catch (e) {
-                    console.error("Error parsing line:", line);
-                }
-            });
-            saveData();
-            printPlayers();
-        }
-
-        function saveData() {
-            for (let key in players) {
-                updatePlayerAvg(key);
-                updatePlayerRanks(key);
-            }
-            localStorage.setItem('players', JSON.stringify(players));
-        }
+        document.addEventListener('DOMContentLoaded', loadData);
 
         function loadData() {
-            let data = localStorage.getItem('players');
-            if (data) players = JSON.parse(data);
+            fetch('elo.txt')
+                .then(response => response.text())
+                .then(text => {
+                    const lines = text.trim().split('\n');
+                    const data = lines.map(line => line.split(',').map(item => item.trim()));
+                    renderTable(data);
+                })
+                .catch(error => console.error('Error loading data:', error));
         }
 
-        // Display Functions
-        function printPlayers() {
-            let sorted = Object.entries(players).sort((a, b) => b[1].avg - a[1].avg || a[1].display.localeCompare(b[1].display));
-            let table = '<table><tr><th>No.</th><th>Name</th><th>Avg</th><th>Off</th><th>Def</th><th>T</th><th>Win%</th><th>Rank</th></tr>';
-            sorted.forEach(([key, data], idx) => {
-                let winRate = data.played > 0 ? Math.round((data.wins / data.played) * 100) : 0;
-                table += `<tr><td>${idx + 1}</td><td>${data.display}</td><td>${data.avg}</td><td>${data.offense}</td><td>${data.defense}</td><td>${data.played}</td><td>${winRate}</td><td>${highestOverallRank(key)}</td></tr>`;
+        function renderTable(data) {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach(cell => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                });
+                tableBody.appendChild(tr);
             });
-            table += '</table>';
-            document.getElementById('player-list').innerHTML = table;
         }
 
-        function printPlayersAlphabetically() {
-            let sorted = Object.entries(players).sort((a, b) => a[1].display.localeCompare(b[1].display));
-            let table = '<table><tr><th>Name</th><th>Avg</th><th>Off</th><th>Def</th><th>T</th><th>Win%</th></tr>';
-            sorted.forEach(([_, data]) => {
-                let winRate = data.played > 0 ? Math.round((data.wins / data.played) * 100) : 0;
-                table += `<tr><td>${data.display}</td><td>${data.avg}</td><td>${data.offense}</td><td>${data.defense}</td><td>${data.played}</td><td>${winRate}</td></tr>`;
-            });
-            table += '</table>';
-            document.getElementById('player-list').innerHTML = table;
-        }
+        function sortTable(columnIndex) {
+            const table = document.getElementById('rankingTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const isAscending = tbody.dataset.sortOrder === 'asc';
+            tbody.dataset.sortOrder = isAscending ? 'desc' : 'asc';
 
-        function printBestPlayers() {
-            let bestAvg = Object.entries(players).reduce((a, b) => a[1].avg > b[1].avg ? a : b);
-            let bestOff = Object.entries(players).reduce((a, b) => a[1].offense > b[1].offense ? a : b);
-            let bestDef = Object.entries(players).reduce((a, b) => a[1].defense > b[1].defense ? a : b);
-            let mostPlayed = Object.entries(players).reduce((a, b) => a[1].played > b[1].played ? a : b);
-            let bestWinRate = Object.entries(players).reduce((a, b) => (a[1].played ? a[1].wins / a[1].played : 0) > (b[1].played ? b[1].wins / b[1].played : 0) ? a : b);
-            let text = `Best Players:<br>` +
-                       `Best Average: ${bestAvg[1].display} (A-${bestAvg[1].avg}, Rank-${getRankDisplay(bestAvg[1].rank_a)})<br>` +
-                       `Best Offense: ${bestOff[1].display} (O-${bestOff[1].offense}, Rank-${getRankDisplay(bestOff[1].rank_o)})<br>` +
-                       `Best Defense: ${bestDef[1].display} (D-${bestDef[1].defense}, Rank-${getRankDisplay(bestDef[1].rank_d)})<br>` +
-                       `Most Time Played: ${mostPlayed[1].display} (T-${mostPlayed[1].played})<br>` +
-                       `Highest Win Rate: ${bestWinRate[1].display} (R-${bestWinRate[1].played ? (bestWinRate[1].wins / bestWinRate[1].played * 100).toFixed(2) : 0}%)`;
-            document.getElementById('player-list').innerHTML = text;
-        }
+            rows.sort((a, b) => {
+                const aText = a.children[columnIndex].textContent;
+                const bText = b.children[columnIndex].textContent;
 
-        function printRank(crit) {
-            let sorted, headers, valueFunc, rankVal;
-            if (crit === "a") {
-                sorted = Object.entries(players).sort((a, b) => b[1].avg - a[1].avg || a[1].display.localeCompare(b[1].display));
-                headers = ["No.", "Name", "Average", "Rank_A"];
-                valueFunc = d => d[1].avg;
-                rankVal = d => d[1].rank_a;
-            } else if (crit === "o") {
-                sorted = Object.entries(players).sort((a, b) => b[1].offense - a[1].offense || a[1].display.localeCompare(b[1].display));
-                headers = ["No.", "Name", "Offense", "Rank_O"];
-                valueFunc = d => d[1].offense;
-                rankVal = d => d[1].rank_o;
-            } else if (crit === "d") {
-                sorted = Object.entries(players).sort((a, b) => b[1].defense - a[1].defense || a[1].display.localeCompare(b[1].display));
-                headers = ["No.", "Name", "Defense", "Rank_D"];
-                valueFunc = d => d[1].defense;
-                rankVal = d => d[1].rank_d;
-            } else if (crit === "t") {
-                sorted = Object.entries(players).sort((a, b) => b[1].played - a[1].played || a[1].display.localeCompare(b[1].display));
-                headers = ["No.", "Name", "Played"];
-                valueFunc = d => d[1].played;
-                rankVal = () => "";
-            } else if (crit === "r") {
-                sorted = Object.entries(players).sort((a, b) => (b[1].played ? b[1].wins / b[1].played : 0) - (a[1].played ? a[1].wins / a[1].played : 0) || a[1].display.localeCompare(b[1].display));
-                headers = ["No.", "Name", "Win%"];
-                valueFunc = d => d[1].played > 0 ? Math.round((d[1].wins / d[1].played) * 100) : 0;
-                rankVal = () => "";
-            } else if (["a-rank", "o-rank", "d-rank"].includes(crit)) {
-                let field = { "a-rank": "rank_a", "o-rank": "rank_o", "d-rank": "rank_d" }[crit];
-                sorted = Object.entries(players).sort((a, b) => RANK_ORDER[b[1][field] || "iron"] - RANK_ORDER[a[1][field] || "iron"] || b[1].avg - a[1].avg);
-                headers = ["No.", "Name", field.toUpperCase()];
-                valueFunc = () => "";
-                rankVal = d => d[1][field] || "iron";
-            } else {
-                document.getElementById('player-list').innerHTML = "Unsupported rank criteria.";
-                return;
-            }
-            let table = `<table><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
-            let ordinal = 1;
-            sorted.forEach(d => {
-                let storedRank = rankVal(d);
-                let num = storedRank === HIDDEN_RANK ? "0" : ordinal;
-                let row = `<tr><td>${num}</td><td>${d[1].display}</td>`;
-                if (valueFunc(d) !== "") row += `<td>${valueFunc(d)}</td>`;
-                if (rankVal(d) !== "") row += `<td>${getRankDisplay(storedRank)}</td>`;
-                table += row + '</tr>';
-                if (storedRank !== HIDDEN_RANK) ordinal++;
-            });
-            table += '</table>';
-            document.getElementById('player-list').innerHTML = table;
-        }
-
-        // Command Processing
-        function processGame(command) {
-            const match = command.match(/^(.*?)\s*(win|smallwin|closewin|bigwin|perfectwin)\s*(.*?)$/i);
-            if (!match) {
-                document.getElementById('player-list').innerHTML = "Invalid game command format.";
-                return;
-            }
-            let [_, team1Str, winType, team2Str] = match;
-            winType = winType.toLowerCase();
-            if (!WIN_TYPE_MULTIPLIERS[winType]) {
-                document.getElementById('player-list').innerHTML = "Invalid win type.";
-                return;
-            }
-            let baseMultiplier = WIN_TYPE_MULTIPLIERS[winType];
-            function parseTeam(str) {
-                if (str.includes(';')) {
-                    let parts = str.split(';').map(s => s.trim());
-                    let offense = parts[0].split(',').map(s => s.trim()).filter(Boolean);
-                    let defense = parts.slice(1).join(',').split(',').map(s => s.trim()).filter(Boolean);
-                    return [offense, defense];
-                } else {
-                    let offense = str.split(',').map(s => s.trim()).filter(Boolean);
-                    return [offense, []];
+                if (isNaN(aText) || isNaN(bText)) {
+                    return isAscending ? aText.localeCompare(bText) : bText.localeCompare(aText);
                 }
-            }
-            let [team1Off, team1Def] = parseTeam(team1Str);
-            let [team2Off, team2Def] = parseTeam(team2Str);
-            [team1Off, team1Def, team2Off, team2Def].flat().forEach(getOrCreatePlayer);
-            function getAverageRating(names, type) {
-                if (!names.length) return null;
-                return Math.round(names.reduce((sum, n) => sum + getOrCreatePlayer(n)[type], 0) / names.length);
-            }
-            let oppForTeam1 = team2Def.length ? getAverageRating(team2Def, "defense") : getAverageRating(team2Off, "offense");
-            let oppOffTeam1 = team2Off.length ? getAverageRating(team2Off, "offense") : getAverageRating(team2Def, "defense");
-            let oppForTeam2 = team1Def.length ? getAverageRating(team1Def, "defense") : getAverageRating(team1Off, "offense");
-            let oppOffTeam2 = team1Off.length ? getAverageRating(team1Off, "offense") : getAverageRating(team1Def, "defense");
-            function updateRating(current, win, opp, multiplier) {
-                let change = Math.round(K_FACTOR * multiplier);
-                return [win ? current + change : current - change, change];
-            }
-            team1Off.forEach(n => {
-                let p = getOrCreatePlayer(n);
-                [p.offense] = updateRating(p.offense, 1, oppForTeam1 || 1500, baseMultiplier);
-                p.played++;
-                p.wins++;
+                return isAscending ? aText - bText : bText - aText;
             });
-            team1Def.forEach(n => {
-                let p = getOrCreatePlayer(n);
-                [p.defense] = updateRating(p.defense, 1, oppOffTeam1 || 1500, baseMultiplier);
-                p.played++;
-                p.wins++;
-            });
-            team2Off.forEach(n => {
-                let p = getOrCreatePlayer(n);
-                [p.offense] = updateRating(p.offense, 0, oppForTeam2 || 1500, baseMultiplier);
-                p.played++;
-            });
-            team2Def.forEach(n => {
-                let p = getOrCreatePlayer(n);
-                [p.defense] = updateRating(p.defense, 0, oppOffTeam2 || 1500, baseMultiplier);
-                p.played++;
-            });
-            for (let key in players) {
-                updatePlayerAvg(key);
-                updatePlayerRanks(key);
-            }
-            saveData();
-            document.getElementById('player-list').innerHTML = "Game processed and ratings updated.";
-            printPlayers();
-        }
 
-        function processAdd(command) {
-            let info = command.slice(3).trim();
-            let parts = info.split(',').map(p => p.trim());
-            if (parts.length === 1) {
-                getOrCreatePlayer(parts[0]);
-                saveData();
-                document.getElementById('player-list').innerHTML = `Player ${parts[0]} added with default stats.`;
-                printPlayers();
-            } else if (parts.length === 9) {
-                let [name, off, deff, played, wins, avg, rank_d, rank_o, rank_a] = parts;
-                try {
-                    off = parseInt(off);
-                    deff = parseInt(deff);
-                    played = parseInt(played);
-                    wins = parseInt(wins);
-                    avg = parseInt(avg);
-                    let canon = canonicalize(name);
-                    players[canon] = { display: name, offense: off, defense: deff, played, wins, avg, rank_d, rank_o, rank_a };
-                    if (canon.includes("zhong")) {
-                        players[canon].rank_d = HIDDEN_RANK;
-                        players[canon].rank_o = HIDDEN_RANK;
-                        players[canon].rank_a = HIDDEN_RANK;
-                    }
-                    saveData();
-                    document.getElementById('player-list').innerHTML = `Player ${name} added with specified stats.`;
-                    printPlayers();
-                } catch (e) {
-                    document.getElementById('player-list').innerHTML = "Error: Incorrect format in add command.";
-                }
-            } else {
-                document.getElementById('player-list').innerHTML = "Wrong format for add command.";
-            }
+            rows.forEach(row => tbody.appendChild(row));
         }
-
-        function processCombine(command) {
-            let parts = command.slice(7).trim().split(',').map(p => p.trim());
-            if (parts.length !== 2) {
-                document.getElementById('player-list').innerHTML = "Combine requires two names separated by a comma.";
-                return;
-            }
-            let [name1, name2] = parts;
-            let canon1 = canonicalize(name1);
-            let canon2 = canonicalize(name2);
-            if (!players[canon1] || !players[canon2]) {
-                document.getElementById('player-list').innerHTML = "One of the players does not exist.";
-                return;
-            }
-            mergeRecord(canon1, players[canon1].display, players[canon2].offense, players[canon2].defense, players[canon2].played, players[canon2].wins);
-            delete players[canon2];
-            saveData();
-            document.getElementById('player-list').innerHTML = `Players ${name1} and ${name2} combined.`;
-            printPlayers();
-        }
-
-        function processCommand() {
-            let command = document.getElementById('command-input').value.trim().toLowerCase();
-            if (command === "pp") printPlayers();
-            else if (command === "best") printBestPlayers();
-            else if (command === "name") printPlayersAlphabetically();
-            else if (command.startsWith("add ")) processAdd(command);
-            else if (command.startsWith("combine ")) processCombine(command);
-            else if (command.startsWith("rank ")) printRank(command.split(' ')[1]);
-            else processGame(command);
-            document.getElementById('command-input').value = '';
-        }
-
-        // Initialize
-        loadData();
-        if (Object.keys(players).length) printPlayers();
     </script>
-    <font color="red">
-Example Data Set (Copy this for testing): <br/>
-<br/>
-<font color="black">
-GraysonHou, 165, 155, 32, 69, 160, copper, copper, copper. <br/>
-WilliamGao, 179, 137, 41, 54, 158, iron, copper, copper. <br/>
-LarryZhong, 125, 188, 60, 57, 156, lz, lz, lz. <br/>
-JeanLuc, 110, 182, 8, 38, 146, copper, iron, iron. <br/>
-BradyGriffin, 153, 110, 9, 78, 132, iron, copper, iron. <br/>
-JeffersonWei, 156, 100, 7, 71, 128, iron, copper, iron. <br/>
-Anonymous, 101, 150, 53, 30, 126, copper, iron, iron. <br/>
-PerkinShowalter, 116, 134, 6, 33, 125, iron, iron, iron. <br/>
-JeffJin, 144, 100, 16, 62, 122, iron, iron, iron. <br/>
-ParkerHoppy, 139, 106, 6, 67, 122, iron, iron, iron. <br/>
-SamuelLi, 130, 108, 23, 48, 119, iron, iron, iron. <br/>
-RyanGong, 124, 100, 1, 100, 112, iron, iron, iron. <br/>
-StevenHou, 112, 112, 8, 50, 112, iron, iron, iron. <br/>
-JustinCheng, 120, 100, 18, 39, 110, iron, iron, iron. <br/>
-AustinLiu, 110, 105, 16, 38, 108, iron, iron, iron. <br/>
-JasperChapman, 116, 100, 1, 100, 108, iron, iron, iron. <br/>
-ThayerMahan, 100, 116, 8, 50, 108, iron, iron, iron. <br/>
-LiamLin, 100, 110, 11, 36, 105, iron, iron, iron. <br/>
-CadeBrekken, 109, 100, 1, 100, 104, iron, iron, iron. <br/>
-PrestonPhillis, 104, 104, 1, 100, 104, iron, iron, iron. <br/>
 </body>
 </html>
