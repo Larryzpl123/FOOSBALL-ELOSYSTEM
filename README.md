@@ -49,7 +49,7 @@ Additionally, the system includes 5 hidden ranks for advanced classifications.
 The following commands are available for interacting with the system:
 
 - `<team1> <winType> <team2>`: Process a regular game result.
-- `pp`: Print detailed player statistics, pp <rank> can give player stats only in the given rank.
+- `pp`: Print detailed player statistics, including the highest overall rank.
 - `best`: Show the best players based on various performance metrics.
 - `name`: Print player names in alphabetical order.
 - `combine a to b`: Merge player statistics from one player to another.
