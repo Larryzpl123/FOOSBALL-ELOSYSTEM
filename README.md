@@ -1,5 +1,7 @@
 A simple foosball elo system.
 
+Score Board: https://larryzpl123.github.io/FOOSBALL-ELOSYSTEM/
+
 Functions:
 
 Name Normalization & Merging: <br />
