@@ -42,15 +42,16 @@
         <table id="rankingTable">
             <thead>
                 <tr>
-                    <th onclick="sortTable(0)">Name</th>
-                    <th onclick="sortTable(1)">Offense Points</th>
-                    <th onclick="sortTable(2)">Defense Points</th>
-                    <th onclick="sortTable(3)">Times Played</th>
-                    <th onclick="sortTable(4)">Win Rate (%)</th>
-                    <th onclick="sortTable(5)">Average Points</th>
-                    <th onclick="sortTable(6)">Defense Rank</th>
-                    <th onclick="sortTable(7)">Offense Rank</th>
-                    <th onclick="sortTable(8)">Average Rank</th>
+                    <th>No.</th>
+                    <th onclick="sortTable(1)">Name</th>
+                    <th onclick="sortTable(2)">Offense Points</th>
+                    <th onclick="sortTable(3)">Defense Points</th>
+                    <th onclick="sortTable(4)">Times Played</th>
+                    <th onclick="sortTable(5)">Win Rate (%)</th>
+                    <th onclick="sortTable(6)">Average Points</th>
+                    <th onclick="sortTable(7)">Defense Rank</th>
+                    <th onclick="sortTable(8)">Offense Rank</th>
+                    <th onclick="sortTable(9)">Average Rank</th>
                 </tr>
             </thead>
             <tbody id="tableBody">
@@ -75,8 +76,11 @@
         function renderTable(data) {
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
-            data.forEach(row => {
+            data.forEach((row, index) => {
                 const tr = document.createElement('tr');
+                const noCell = document.createElement('td');
+                noCell.textContent = index + 1; // Display ranking number
+                tr.appendChild(noCell);
                 row.forEach(cell => {
                     const td = document.createElement('td');
                     td.textContent = cell;
@@ -94,8 +98,8 @@
             tbody.dataset.sortOrder = isAscending ? 'desc' : 'asc';
 
             rows.sort((a, b) => {
-                const aText = a.children[columnIndex].textContent;
-                const bText = b.children[columnIndex].textContent;
+                const aText = a.children[columnIndex + 1].textContent; // Adjust index for sorting
+                const bText = b.children[columnIndex + 1].textContent;
 
                 if (isNaN(aText) || isNaN(bText)) {
                     return isAscending ? aText.localeCompare(bText) : bText.localeCompare(aText);
@@ -103,7 +107,7 @@
                 return isAscending ? aText - bText : bText - aText;
             });
 
-            rows.forEach(row => tbody.appendChild(row));
+            renderTable(rows.map(row => Array.from(row.children).slice(1).map(cell => cell.textContent))); // Re-render with ranking numbers
         }
     </script>
 </body>
