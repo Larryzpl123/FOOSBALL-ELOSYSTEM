@@ -12,7 +12,8 @@ LincolnGambol, 117, 153, 4, 100, 135, bronze, iron, iron.
 JeffersonWei, 169, 100, 8, 75, 134, iron, copper, iron.
 ParkerHoppy, 153, 106, 7, 71, 130, iron, bronze, iron.
 JeffJin, 157, 100, 19, 63, 128, iron, bronze, iron.
-Anonymous, 100, 132, 77, 26, 116, copper, iron, iron.
+ChasCamp, 126, 110, 3, 100, 118, iron, iron, iron.
+Anonymous, 100, 132, 78, 26, 116, copper, iron, iron.
 Gabe, 123, 100, 5, 20, 112, bronze, bronze, iron.
 JasperChapman, 116, 100, 1, 100, 108, iron, iron, iron.
 PerkinShowalter, 115, 100, 13, 31, 108, iron, iron, iron.
@@ -24,7 +25,6 @@ CadeBrekken, 109, 100, 1, 100, 104, iron, iron, iron.
 PrestonPhillis, 104, 104, 1, 100, 104, iron, iron, iron.
 RyanGong, 107, 100, 2, 50, 104, iron, iron, iron.
 AshtonCoffin, 100, 100, 0, 0, 100, iron, iron, iron.
-ChasCamp, 110, 110, 2, 100, 110, iron, iron, iron.
 JacksonDwyer, 100, 100, 0, 0, 100, iron, iron, iron.
 JacobSmithTatham, 100, 100, 1, 0, 100, iron, iron, iron.
 Leonli, 100, 100, 0, 0, 100, iron, iron, iron.
