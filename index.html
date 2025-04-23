@@ -30,6 +30,10 @@
         th:hover {
             background-color: #45a049;
         }
+        .arrow {
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
         .container {
             max-width: 800px;
             margin: auto;
@@ -61,6 +65,9 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', loadData);
+
+        let currentSortColumn = null;
+        let sortOrder = 'asc';
 
         function loadData() {
             fetch('elo.txt')
@@ -94,20 +101,45 @@
             const table = document.getElementById('rankingTable');
             const tbody = table.querySelector('tbody');
             const rows = Array.from(tbody.querySelectorAll('tr'));
-            const isAscending = tbody.dataset.sortOrder === 'asc';
-            tbody.dataset.sortOrder = isAscending ? 'desc' : 'asc';
+            const isAscending = (currentSortColumn === columnIndex && sortOrder === 'asc');
+            currentSortColumn = columnIndex;
+            sortOrder = isAscending ? 'desc' : 'asc';
 
             rows.sort((a, b) => {
                 const aText = a.children[columnIndex + 1].textContent; // Adjust index for sorting
                 const bText = b.children[columnIndex + 1].textContent;
 
-                if (isNaN(aText) || isNaN(bText)) {
-                    return isAscending ? aText.localeCompare(bText) : bText.localeCompare(aText);
+                const primarySort = isNaN(aText) || isNaN(bText) ?
+                    aText.localeCompare(bText) : aText - bText;
+
+                if (primarySort === 0) {
+                    // Secondary sort by Average Points
+                    const avgA = parseFloat(a.children[6].textContent);
+                    const avgB = parseFloat(b.children[6].textContent);
+                    const secondarySort = avgA - avgB;
+
+                    if (secondarySort === 0) {
+                        // Tertiary sort by Name
+                        return a.children[1].textContent.localeCompare(b.children[1].textContent);
+                    }
+                    return secondarySort;
                 }
-                return isAscending ? aText - bText : bText - aText;
+                return primarySort;
             });
 
+            if (sortOrder === 'desc') rows.reverse();
+
             renderTable(rows.map(row => Array.from(row.children).slice(1).map(cell => cell.textContent))); // Re-render with ranking numbers
+            updateSortArrows();
+        }
+
+        function updateSortArrows() {
+            const headers = document.querySelectorAll('th');
+            headers.forEach(header => {
+                header.innerHTML = header.innerHTML.replace(/&uarr;|&darr;/, '');
+            });
+            const currentHeader = headers[currentSortColumn + 1];
+            currentHeader.innerHTML += sortOrder === 'asc' ? ' &uarr;' : ' &darr;';
         }
     </script>
 </body>
