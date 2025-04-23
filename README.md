@@ -1,5 +1,10 @@
 A simple foosball elo system.
 
+The foosball.py is the offline execution MAIN file
+The index.html is scoreboard
+The 2index.html is online execution file
+And elo.txt is the database file
+
 Functions:
 
 Name Normalization & Merging: <br />
