@@ -1,8 +1,7 @@
-j, 447, 100, 26, 50, 274, iron, silver, silver.
 GraysonHou, 268, 188, 48, 73, 228, copper, silver, copper.
 LarryZhong, 148, 249, 79, 58, 198, lz, lz, lz.
-WilliamGao, 243, 144, 64, 55, 194, iron, silver, copper.
-BradyGriffin, 252, 110, 16, 88, 181, iron, silver, bronze.
+WilliamGao, 246, 144, 64, 55, 195, iron, silver, copper.
+BradyGriffin, 277, 110, 18, 83, 194, iron, silver, bronze.
 LincolnGambol, 117, 223, 11, 91, 170, copper, iron, bronze.
 JustinCheng, 147, 175, 30, 53, 161, bronze, iron, bronze.
 SamuelLi, 168, 150, 28, 54, 159, bronze, bronze, bronze.
@@ -27,11 +26,10 @@ Gabe, 106, 100, 6, 17, 103, bronze, bronze, iron.
 PerkinShowalter, 103, 100, 16, 31, 102, iron, iron, iron.
 AshtonCoffin, 100, 100, 0, 0, 100, iron, iron, iron.
 JacksonDwyer, 100, 100, 0, 0, 100, iron, iron, iron.
-JacobSmithTatham, 100, 100, 1, 0, 100, iron, iron, iron.
+Jacob, 100, 100, 0, 0, 100, iron, iron, iron.
 Leonli, 100, 100, 0, 0, 100, iron, iron, iron.
 MichaelJany, 100, 100, 0, 0, 100, iron, iron, iron.
 NoahRosenfield, 100, 100, 1, 0, 100, iron, iron, iron.
 PeterHuang, 100, 100, 0, 0, 100, iron, iron, iron.
 PeterLiu, 100, 100, 0, 0, 100, iron, iron, iron.
 WilliamWei, 100, 100, 0, 0, 100, iron, iron, iron.
-p, 100, 100, 0, 0, 100, iron, iron, iron.

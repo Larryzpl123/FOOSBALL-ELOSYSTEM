@@ -1,7 +1,5 @@
 A simple foosball elo system.
 
-Score Board: https://larryzpl123.github.io/FOOSBALL-ELOSYSTEM/
-
 Functions:
 
 Name Normalization & Merging: <br />
@@ -16,10 +14,11 @@ Besides Elo scores (offense, defense, average), players now earn an un-droppable
 • ≥450: 5 - gold <br />
 • ≥850: 6 - plat <br />
 • ≥1234: 7 - jade <br />
-• ≥1650: 8 - diamond <br />
-• ≥2222: 9 - master <br />
-• ≥2900: 10 - ultra <br />
-2 hidden ranks <br />
+• ≥1650: 8 - emerald <br />
+• ≥2222: 9 - diamond <br />
+• ≥2468: 10 - master <br />
+• ≥2900: 11 - ultra <br />
+5 hidden ranks <br />
 
 Commands: <br /> 
 • <team1> <winType> <team2> – Regular game processing <br />
