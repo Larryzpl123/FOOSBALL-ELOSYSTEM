@@ -397,7 +397,7 @@ def print_best_players():
     most_played = max(players.values(), key=lambda x: x["played"])
     highest_win = max(players.values(), key=lambda x: (x["wins"]/x["played"]) if x["played"] else 0)
     
-    print("Best Players:")
+    print("  Best Players:")
     print(f"  Best Average: {best_avg['display']} (A-{best_avg['avg']})")
     print(f"  Best Offense: {best_off['display']} (O-{best_off['offense']})")
     print(f"  Best Defense: {best_def['display']} (D-{best_def['defense']})")
@@ -405,11 +405,73 @@ def print_best_players():
     if highest_win["played"] > 0:
         win_rate = (highest_win["wins"] / highest_win["played"]) * 100
         print(f"  Highest Win Rate: {highest_win['display']} ({win_rate:.1f}%)")
+    print("  Best Teams:")
+    print("  1 - GraysonHou ; LarryZhong")
+    print("  2 - WilliamGao ; AustinLiu")
+    print("  3 - Gabe ; CarsonDavis")
+
+def process_combine_command(command):
+    """
+    Process the command to combine two player records.
+    Expected command format:
+         combine a to b.
+    This merges player 'a' into player 'b' (b remains the main record,
+    including its display name and highest rank). After merging, player a is removed.
+    """
+    import re
+    pattern = r"^combine\s+(.*?)\s+to\s+(.*?)\.?$"
+    match = re.match(pattern, command, re.IGNORECASE)
+    if not match:
+        print("Invalid format. Use: combine a to b.")
+        return
+    src_name = match.group(1).strip()
+    dest_name = match.group(2).strip()
+    src_key = canonicalize(src_name)
+    dest_key = canonicalize(dest_name)
+    if src_key not in players:
+        print(f"Player '{src_name}' not found.")
+        return
+    if dest_key not in players:
+        print(f"Player '{dest_name}' not found.")
+        return
+    # Merge the source record into destination.
+    # Use the preexisting merge_record function.
+    merge_record(
+        dest_key,
+        players[dest_key]["display"],  # keep dest display name
+        players[src_key]["offense"],
+        players[src_key]["defense"],
+        players[src_key]["played"],
+        players[src_key]["wins"]
+    )
+    # Remove the source player.
+    del players[src_key]
+    print(f"Combined '{src_name}' into '{dest_name}' (main record remains as '{dest_name}').")
+
+def process_name_command():
+    """
+    Process the 'name' command.
+    Prints all player names in alphabetical order along with their stats:
+      - Average rating (avg)
+      - Offense rating (off)
+      - Defense rating (def)
+      - Times played (T)
+      - Win percentage (Win%)
+    """
+    if not players:
+        print("No player data available.")
+        return
+    sorted_list = sorted(players.items(), key=lambda kv: kv[1]["display"].lower())
+    print("Name, Average, Offense, Defense, Games Played, Win%")
+    for key, data in sorted_list:
+        played = data.get("played", 0)
+        win_rate = round((data["wins"] / played) * 100) if played > 0 else 0
+        print(f"{data['display']}: A-{data['avg']}, O-{data['offense']}, D-{data['defense']}, T-{played}, R-{win_rate}%")
 
 def main():
     load_data()
     print("Foosball ELO System")
-    print("Commands: game, pp, best, exit")
+    print("Commands: pp, best, combine, name, exit")
     while True:
         cmd = input("> ").strip()
         if cmd.lower() == "exit":
@@ -419,6 +481,10 @@ def main():
             print_players()
         elif cmd.lower() == "best":
             print_best_players()
+        elif cmd.lower().startswith("combine"):
+            process_combine_command(cmd)  # Use 'cmd' here
+        elif cmd.lower() == "name":  # Use 'cmd' here
+            process_name_command()
         else:
             process_game(cmd)
 

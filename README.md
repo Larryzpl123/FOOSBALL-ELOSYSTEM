@@ -24,4 +24,5 @@ Commands: <br />
 • pp – Print detailed player stats (with highest overall rank) <br />
 • best – Show best players by various metrics <br />
 • name – Print player names alphabetically <br />
-• exit – Quit the program <br />
+• combine a to b – Combine player and their stats <br />
+• exit – Save and quit the program <br />
