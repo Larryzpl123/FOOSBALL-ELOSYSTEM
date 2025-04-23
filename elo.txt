@@ -24,7 +24,7 @@ CadeBrekken, 109, 100, 1, 100, 104, iron, iron, iron.
 PrestonPhillis, 104, 104, 1, 100, 104, iron, iron, iron.
 RyanGong, 107, 100, 2, 50, 104, iron, iron, iron.
 AshtonCoffin, 100, 100, 0, 0, 100, iron, iron, iron.
-ChasCamp, 100, 100, 2, 50, 100, iron, iron, iron.
+ChasCamp, 110, 110, 2, 100, 110, iron, iron, iron.
 JacksonDwyer, 100, 100, 0, 0, 100, iron, iron, iron.
 JacobSmithTatham, 100, 100, 1, 0, 100, iron, iron, iron.
 Leonli, 100, 100, 0, 0, 100, iron, iron, iron.

@@ -106,8 +106,8 @@
             sortOrder = isAscending ? 'desc' : 'asc';
 
             rows.sort((a, b) => {
-                const aText = a.children[columnIndex + 1].textContent; // Adjust index for sorting
-                const bText = b.children[columnIndex + 1].textContent;
+                const aText = a.children[columnIndex].textContent; // Corrected index
+                const bText = b.children[columnIndex].textContent; // Corrected index
 
                 let primarySort;
                 if (columnIndex === 1) {
@@ -133,17 +133,20 @@
 
             if (sortOrder === 'desc') rows.reverse();
 
-            renderTable(rows.map(row => Array.from(row.children).slice(1).map(cell => cell.textContent))); // Re-render with ranking numbers
+            // Re-render with sorted data (excluding the No. column for data integrity)
+            renderTable(rows.map(row => Array.from(row.children).slice(1).map(cell => cell.textContent)));
             updateSortArrows();
         }
 
         function updateSortArrows() {
             const headers = document.querySelectorAll('th');
             headers.forEach(header => {
-                header.innerHTML = header.innerHTML.replace(/&uarr;|&darr;/, ''); // Clear previous arrows
+                header.innerHTML = header.innerHTML.replace(/&uarr;|&darr;/, '');
             });
-            const currentHeader = headers[currentSortColumn + 1];
-            currentHeader.innerHTML += sortOrder === 'asc' ? ' &uarr;' : ' &darr;';
+            if (currentSortColumn !== null) {
+                const currentHeader = headers[currentSortColumn]; // Corrected index
+                currentHeader.innerHTML += sortOrder === 'asc' ? ' &uarr;' : ' &darr;';
+            }
         }
     </script>
 </body>
