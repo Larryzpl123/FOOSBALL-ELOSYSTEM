@@ -1,3 +1,4 @@
+<a href="2index.html">Link to functional page</a>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -112,7 +113,7 @@
                 if (columnIndex === 1) {
                     primarySort = aText.localeCompare(bText); // Alphabetical sorting for Name
                 } else {
-                    primarySort = isNaN(aText) || isNaN(bText) ? aText.localeCompare(bText) : aText - bText;
+                    primarySort = isNaN(aText) || isNaN(bText) ? aText.localeCompare(bText) : parseFloat(aText) - parseFloat(bText);
                 }
 
                 if (primarySort === 0) {
@@ -139,7 +140,7 @@
         function updateSortArrows() {
             const headers = document.querySelectorAll('th');
             headers.forEach(header => {
-                header.innerHTML = header.innerHTML.replace(/&uarr;|&darr;/, '');
+                header.innerHTML = header.innerHTML.replace(/&uarr;|&darr;/, ''); // Clear previous arrows
             });
             const currentHeader = headers[currentSortColumn + 1];
             currentHeader.innerHTML += sortOrder === 'asc' ? ' &uarr;' : ' &darr;';
