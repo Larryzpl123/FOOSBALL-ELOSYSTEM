@@ -5,13 +5,6 @@ import re
 import random
 import string
 
-'''
-Foosball, also known as table soccer, has roots in late 19th-century Europe with patents for similar games filed in the 1890s.
-While various inventors experimented with tabletop soccer games, the first official foosball table was patented in 1921 by Harold Searles Thornton in the UK.
-He was inspired by the popularity of soccer and aimed to bring the excitement of the sport indoors.
-The game gained popularity in the 1960s and 1980s, particularly in the United States, and continues to be enjoyed today. 
-'''
-
 # Global constants
 FILE_NAME = "elo.txt"
 K_FACTOR = 32
@@ -30,11 +23,14 @@ WIN_TYPE_MULTIPLIERS = {
 # Ranking thresholds (un-droppable, once reached, always kept)
 RANK_THRESHOLDS = [
     (2900, "ultra"),
+    (2222, "master"),
     (1650, "diamond"),
+    (1234, "jade"),
     (850, "plat"),
     (450, "gold"),
     (250, "silver"),
-    (150, "copper"),
+    (200, "copper"),
+    (150, "bronze"),
     (0,   "iron")
 ]
 
@@ -45,14 +41,17 @@ SPECIAL_IM = "im"   # special flag printed as "importal"
 # Order for comparing ranking strings (the full words). 
 RANK_ORDER = {
     "iron": 1,
-    "copper": 2,
-    "silver": 3,
-    "gold": 4,
-    "plat": 5,
-    "diamond": 6,
-    "ultra": 7,
-    HIDDEN_RANK: 8,
-    SPECIAL_IM: 8  # treat im as highest; will print as "importal"
+    "bronze": 2,
+    "copper": 3,
+    "silver": 4,
+    "gold": 5,
+    "plat": 6,
+    "jade": 7,
+    "diamond": 8,
+    "master": 9,
+    "ultra": 10,
+    HIDDEN_RANK: 10,
+    SPECIAL_IM: 10  # treat im as highest; will print as "importal"
 }
 
 # Dictionary for converting a full rank to its initial letter.
@@ -67,101 +66,67 @@ RANK_INITIAL = {
 }
 
 # Create an inverse dictionary to convert an initial letter back to a full rank name.
-# This will be used when printing.
 RANK_FULL = {v: k for k, v in RANK_INITIAL.items()}
 
-# Data structure for player records.
-# Each record: display, offense, defense, played, wins, avg, rank_o, rank_d, rank_a.
 players = {}
 
-# --- Utility functions ---
-
 def canonicalize(name):
-    """Convert name to a lowercase alphanumeric string (ignore spaces and punctuation)."""
     return ''.join(c for c in name.lower() if c.isalnum())
 
 def get_hidden_rank():
-    """
-    Return a random hidden rank string in the format:
-       L + (4 random lowercase letters) + Z + (4 random lowercase letters)
-    For example: LrjsuZisas
-    """
     letters = string.ascii_lowercase
     return "L" + ''.join(random.choice(letters) for _ in range(4)) + "Z" + ''.join(random.choice(letters) for _ in range(4))
 
 def get_rank_display(rank):
-    """
-    Converts a stored rank value to its display value.
-    If the rank is hidden (HIDDEN_RANK), returns a generated hidden rank string.
-    If the rank is the special "im" flag, returns "importal".
-    Otherwise, if the stored rank is an abbreviation (e.g. "i") then convert it to the full rank name.
-    If not, return rank as-is.
-    """
     if rank == HIDDEN_RANK:
         return get_hidden_rank()
     if rank == SPECIAL_IM:
         return "importal"
-    # If the stored rank is an abbreviation, convert using our inverse mapping.
     if rank in RANK_FULL:
         return RANK_FULL[rank]
     return rank
 
 def get_computed_rank(score):
-    """Compute the rank (as a full string) for a given score based on thresholds."""
     for threshold, rank in RANK_THRESHOLDS:
         if score >= threshold:
             return rank
     return "iron"
 
 def update_player_avg(key):
-    """Update the average rating for a given player record."""
     data = players[key]
     data["avg"] = round((data["offense"] + data["defense"]) / 2)
 
 def update_player_ranks(key):
-    """
-    Update stored rank fields for offense, defense, and average.
-    Ranks never drop -- if a new computed rank is higher (by order) than stored, update.
-    """
     rec = players[key]
     new_o = get_computed_rank(rec["offense"])
     new_d = get_computed_rank(rec["defense"])
     new_a = get_computed_rank(rec["avg"])
     for field, new_val in (("rank_o", new_o), ("rank_d", new_d), ("rank_a", new_a)):
         current = rec.get(field, "iron")
-        # If already hidden or special, do not change
         if current in (HIDDEN_RANK, SPECIAL_IM):
             continue
         if RANK_ORDER[new_val] > RANK_ORDER.get(current, 1):
             rec[field] = new_val
         else:
-            rec[field] = current  # keep the better rank
+            rec[field] = current
 
 def highest_overall_rank(key):
-    """
-    Determine the highest rank (by order) among offense, defense, and average.
-    If any is hidden, then return the hidden rank display.
-    """
     rec = players[key]
     ranks = [rec.get("rank_o", "iron"), rec.get("rank_d", "iron"), rec.get("rank_a", "iron")]
-    # If any is hidden, choose that one.
     if any(r in (HIDDEN_RANK, SPECIAL_IM) for r in ranks):
         return get_hidden_rank()
     best = max(ranks, key=lambda r: RANK_ORDER.get(r, 1))
     return get_rank_display(best)
 
 def get_rank_order(rank):
-    """Get the order of a rank, handling both full names and abbreviations."""
     if rank in RANK_ORDER:
         return RANK_ORDER[rank]
     elif rank in RANK_FULL:
-        full_rank = RANK_FULL[rank]
-        return RANK_ORDER.get(full_rank, 1)
+        return RANK_ORDER[RANK_FULL[rank]]
     else:
-        return 1  # default to lowest
+        return 1
 
 def get_rank_indicator(key):
-    """Determine the indicator (o), (d), or (a) based on offense and defense ranks."""
     rec = players[key]
     rank_o = rec.get("rank_o", "iron")
     rank_d = rec.get("rank_d", "iron")
@@ -175,9 +140,6 @@ def get_rank_indicator(key):
         return "(a)"
 
 def merge_record(key, new_display, off, deff, played, wins, rank_d=None, rank_o=None, rank_a=None):
-    """
-    Merge new record data into an existing record (weighted average by times played).
-    """
     old = players[key]
     total_played = old["played"] + played
     if total_played > 0:
@@ -191,25 +153,18 @@ def merge_record(key, new_display, off, deff, played, wins, rank_d=None, rank_o=
         return new_rank if RANK_ORDER.get(new_rank, 0) > RANK_ORDER.get(old_rank, 0) else old_rank
 
     players[key] = {
-        "display": old["display"],  # keep the earlier display name
+        "display": old["display"],
         "offense": new_off,
         "defense": new_def,
         "played": total_played,
-        "wins": new_wins
+        "wins": new_wins,
+        "avg": round((new_off + new_def) / 2),
+        "rank_d": choose_rank(old.get("rank_d", "iron"), rank_d if rank_d else get_computed_rank(new_def)),
+        "rank_o": choose_rank(old.get("rank_o", "iron"), rank_o if rank_o else get_computed_rank(new_off)),
+        "rank_a": choose_rank(old.get("rank_a", "iron"), rank_a if rank_a else get_computed_rank(round((new_off + new_def) / 2)))
     }
-    update_player_avg(key)
-    players[key]["rank_d"] = choose_rank(old.get("rank_d", "iron"), rank_d if rank_d else get_computed_rank(new_def))
-    players[key]["rank_o"] = choose_rank(old.get("rank_o", "iron"), rank_o if rank_o else get_computed_rank(new_off))
-    players[key]["rank_a"] = choose_rank(old.get("rank_a", "iron"), rank_a if rank_a else get_computed_rank(players[key]["avg"]))
-
-# --- Player Creation ---
 
 def get_or_create_player(name):
-    """
-    Retrieve the player record for 'name' if it exists;
-    otherwise, create a new one with default stats.
-    Also, if the player's canonical name contains 'zhong', force all rank fields to HIDDEN_RANK.
-    """
     key = canonicalize(name)
     if key not in players:
         players[key] = {
@@ -217,28 +172,19 @@ def get_or_create_player(name):
             "offense": RATING_MIN,
             "defense": RATING_MIN,
             "played": 0,
-            "wins": 0
+            "wins": 0,
+            "avg": RATING_MIN,
+            "rank_d": get_computed_rank(RATING_MIN),
+            "rank_o": get_computed_rank(RATING_MIN),
+            "rank_a": get_computed_rank(RATING_MIN)
         }
-        update_player_avg(key)
-        players[key]["rank_d"] = get_computed_rank(players[key]["defense"])
-        players[key]["rank_o"] = get_computed_rank(players[key]["offense"])
-        players[key]["rank_a"] = get_computed_rank(players[key]["avg"])
-        # If the name (canonicalized) contains 'zhong', force the rank to hidden.
         if "zhong" in key:
             players[key]["rank_d"] = HIDDEN_RANK
             players[key]["rank_o"] = HIDDEN_RANK
             players[key]["rank_a"] = HIDDEN_RANK
     return players[key]
 
-# --- File I/O functions ---
-
 def load_data():
-    """
-    Load player data from file.
-    Expected format per line:
-      DisplayName, offense, defense, times_played, win_rate, average, rank_d, rank_o, rank_a.
-    Merges duplicate records (by canonical name).
-    """
     if not os.path.exists(FILE_NAME):
         return
     with open(FILE_NAME, "r", encoding="utf-8") as f:
@@ -271,25 +217,18 @@ def load_data():
                     "offense": off,
                     "defense": deff,
                     "played": played,
-                    "wins": wins
+                    "wins": wins,
+                    "avg": avg,
+                    "rank_d": rank_d if rank_d else get_computed_rank(deff),
+                    "rank_o": rank_o if rank_o else get_computed_rank(off),
+                    "rank_a": rank_a if rank_a else get_computed_rank(avg)
                 }
-                update_player_avg(canon)
-                players[canon]["rank_d"] = rank_d if rank_d else get_computed_rank(deff)
-                players[canon]["rank_o"] = rank_o if rank_o else get_computed_rank(off)
-                players[canon]["rank_a"] = rank_a if rank_a else get_computed_rank(players[canon]["avg"])
-                # Force hidden rank if the canonical name indicates zhong.
                 if "zhong" in canon:
                     players[canon]["rank_d"] = HIDDEN_RANK
                     players[canon]["rank_o"] = HIDDEN_RANK
                     players[canon]["rank_a"] = HIDDEN_RANK
 
 def save_data():
-    """
-    Save player data to file.
-    Each line is:
-      DisplayName, offense, defense, times_played, win_rate, average, rank_d, rank_o, rank_a.
-    Sorted by average descending.
-    """
     for key in players:
         update_player_avg(key)
         update_player_ranks(key)
@@ -302,20 +241,14 @@ def save_data():
             line = f"{data['display']}, {data['offense']}, {data['defense']}, {played}, {win_rate}, {data['avg']}, {data.get('rank_d', 'iron')}, {data.get('rank_o', 'iron')}, {data.get('rank_a', 'iron')}.\n"
             f.write(line)
 
-# --- Display functions ---
-
 def print_players():
-    """
-    Print player info (sorted by average descending) with aligned columns.
-    Also shows the overall rank with an indicator (o), (d), or (a).
-    """
     if not players:
         print("No player data available.")
         return
-    # Update records before printing
-    for key in players:
-        update_player_avg(key)
-        update_player_ranks(key)
+    print("rank thresholds (ranks don't drop):")
+    print("iron: 100, bronze: 150, copper: 200, silver: 250, gold: 450,")
+    print("platinum: 850, jade: 1234, diamond: 1650, master: 2222,")
+    print("ultra: 2900.")
     sorted_list = sorted(players.items(), key=lambda kv: (-kv[1]["avg"], kv[1]["display"]))
     header = f"{'No.':<3}  {'Name':<15}  {'Avg':>5}  {'Off':>5}  {'Def':>5}  {'T':>3}  {'Win%':>5}  {'Rank (Highest a/o/d)':<15}"
     print(header)
@@ -329,327 +262,165 @@ def print_players():
         rank_display = overall_rank + indicator
         print(f"{idx:<3}  {data['display']:<15}  {data['avg']:>5}  {data['offense']:>5}  {data['defense']:>5}  {played:>3}  {win_rate:>5}  {rank_display:<15}")
 
-def print_players_alphabetically():
-    """Print players sorted alphabetically."""
-    if not players:
-        print("No player data available.")
-        return
-    sorted_list = sorted(players.items(), key=lambda kv: kv[1]["display"].lower())
-    header = f"{'Name':<15}  {'Avg':>5}  {'Off':>5}  {'Def':>5}  {'T':>3}  {'Win%':>5}"
-    print(header)
-    print("-" * len(header))
-    for key, data in sorted_list:
-        played = data["played"]
-        wins = data["wins"]
-        win_rate = round((wins / played) * 100) if played > 0 else 0
-        
-        print(f"{data['display']:<15}  {data['avg']:>5}  {data['offense']:>5}  {data['defense']:>5}  {played:>3}  {win_rate:>5}")
+def adjust_opponent_rating(opponent_rating, player_rating):
+    if opponent_rating == RATING_MIN and player_rating > 1500:
+        return 1500
+    return opponent_rating
 
-def print_best_players():
-    """Print best players by various metrics including rank behind the results."""
-    if not players:
-        print("No player data available.")
-        return
-    best_avg = max(players.items(), key=lambda kv: kv[1]["avg"])
-    best_offense = max(players.items(), key=lambda kv: kv[1]["offense"])
-    best_defense = max(players.items(), key=lambda kv: kv[1]["defense"])
-    most_played  = max(players.items(), key=lambda kv: kv[1]["played"])
-    highest_win_rate = max(players.items(), key=lambda kv: (kv[1]["wins"] / kv[1]["played"]) if kv[1]["played"] > 0 else 0)
+def update_rating(curr_rating, score, opposition_rating, multiplier):
+    expected = 1 / (1 + math.pow(10, (adjust_opponent_rating(opposition_rating, curr_rating) - curr_rating) / 400))
+    change = multiplier * K_FACTOR * (score - expected)
+    if change < 0 and curr_rating <= RATING_MIN:
+        return RATING_MIN, 0
+    new_rating = curr_rating + change
+    new_rating = round(new_rating)
+    new_rating = max(min(new_rating, RATING_MAX), RATING_MIN)
+    return new_rating, change
 
-    # For each best result, print the value and also the stored rank (converted to its display)
-    print("Best Players:")
-    print(f"  Best Average: {best_avg[1]['display']} (A-{best_avg[1]['avg']}, Rank-{get_rank_display(best_avg[1].get('rank_a', 'iron'))})")
-    print(f"  Best Offense: {best_offense[1]['display']} (O-{best_offense[1]['offense']}, Rank-{get_rank_display(best_offense[1].get('rank_o', 'iron'))})")
-    print(f"  Best Defense: {best_defense[1]['display']} (D-{best_defense[1]['defense']}, Rank-{get_rank_display(best_defense[1].get('rank_d', 'iron'))})")
-    print(f"  Most Time Played: {most_played[1]['display']} (T-{most_played[1]['played']})")
-    played = highest_win_rate[1]["played"]
-    win_rate = (highest_win_rate[1]["wins"] / played) * 100 if played > 0 else 0
-    print(f"  Highest Win Rate: {highest_win_rate[1]['display']} (R-{win_rate:.2f}%)")
+def calculate_expected_win_rate(player_rating, opponent_rating):
+    expected = 1 / (1 + math.pow(10, (opponent_rating - player_rating) / 400))
+    return expected * 100
 
-def print_rank_cmd(crit):
-    """
-    Process the 'rank' command given a criteria.
-    Supported criteria:
-       a      -> rank by average (show stored average value and rank_a)
-       o      -> rank by offense (show offense value and rank_o)
-       d      -> rank by defense (show defense value and rank_d)
-       t      -> rank by times played
-       r      -> rank by win rate
-       a-rank -> rank by stored average rank (and similarly for o-rank, d-rank)
-       
-    If a player's stored rank is hidden (HIDDEN_RANK), display the row number as 0.
-    """
-    if crit == "a":
-        sorted_list = sorted(players.items(), key=lambda kv: (-kv[1]["avg"], kv[1]["display"]))
-        header = f"{'No.':<3}  {'Name':<15}  {'Average':>7}  {'Rank_A':<10}"
-        def value_func(item):
-            return item[1]["avg"]
-        def rank_val(item):
-            return item[1].get("rank_a", "iron")
-    elif crit == "o":
-        sorted_list = sorted(players.items(), key=lambda kv: (-kv[1]["offense"], kv[1]["display"]))
-        header = f"{'No.':<3}  {'Name':<15}  {'Offense':>7}  {'Rank_O':<10}"
-        def value_func(item):
-            return item[1]["offense"]
-        def rank_val(item):
-            return item[1].get("rank_o", "iron")
-    elif crit == "d":
-        sorted_list = sorted(players.items(), key=lambda kv: (-kv[1]["defense"], kv[1]["display"]))
-        header = f"{'No.':<3}  {'Name':<15}  {'Defense':>7}  {'Rank_D':<10}"
-        def value_func(item):
-            return item[1]["defense"]
-        def rank_val(item):
-            return item[1].get("rank_d", "iron")
-    elif crit == "t":
-        sorted_list = sorted(players.items(), key=lambda kv: (-kv[1]["played"], kv[1]["display"]))
-        header = f"{'No.':<3}  {'Name':<15}  {'Played':>7}"
-        def value_func(item):
-            return item[1]["played"]
-        def rank_val(item):
-            return ""
-    elif crit == "r":
-        sorted_list = sorted(players.items(), key=lambda kv: (-(kv[1]["wins"]/kv[1]["played"]) if kv[1]["played"] else 0, kv[1]["display"]))
-        header = f"{'No.':<3}  {'Name':<15}  {'Win%':>7}"
-        def value_func(item):
-            played = item[1]["played"]
-            return round((item[1]["wins"] / played) * 100) if played > 0 else 0
-        def rank_val(item):
-            return ""
-    elif crit in ("a-rank", "o-rank", "d-rank"):
-        field = {"a-rank": "rank_a", "o-rank": "rank_o", "d-rank": "rank_d"}[crit]
-        sorted_list = sorted(players.items(), key=lambda kv: (-RANK_ORDER.get(kv[1].get(field, "iron"), 1), -kv[1]["avg"], kv[1]["display"]))
-        header = f"{'No.':<3}  {'Name':<15}  {field.upper():<10}"
-        def value_func(item):
-            return ""
-        def rank_val(item):
-            return item[1].get(field, "iron")
+def parse_team(team_str):
+    if ";" in team_str:
+        offense_part, defense_part = team_str.split(";", 1)
+        offense_players = [p.strip() for p in offense_part.split(",") if p.strip()]
+        defense_players = [p.strip() for p in defense_part.split(",") if p.strip()]
     else:
-        print("Unsupported rank criteria.")
-        return
-
-    print(header)
-    print("-" * len(header))
-    # Instead of using enumerate directly, if a player has hidden rank (HIDDEN_RANK)
-    # we print its row number as 0.
-    ordinal = 1
-    for key, data in sorted_list:
-        stored_rank = rank_val((key, data))
-        display_rank = get_rank_display(stored_rank) if stored_rank else ""
-        num = "0" if stored_rank == HIDDEN_RANK else str(ordinal)
-        if crit in ("a", "o", "d"):
-            print(f"{num:<3}  {data['display']:<15}  {value_func((key, data)):>7}  {display_rank:<10}")
-        elif crit in ("t", "r"):
-            print(f"{num:<3}  {data['display']:<15}  {value_func((key, data)):>7}")
-        else:
-            print(f"{num:<3}  {data['display']:<15}  {display_rank:<10}")
-        if stored_rank != HIDDEN_RANK:
-            ordinal += 1
+        offense_players = [p.strip() for p in team_str.split(",") if p.strip()]
+        defense_players = []
+    return offense_players, defense_players
 
 def process_game(command):
-    """
-    Process a game result command.
-    Format:
-      <team1> <win_type> <team2>
-    """
     pattern = r"^(.*?)\s*(win|smallwin|closewin|bigwin|perfectwin)\s*(.*?)$"
     match = re.match(pattern, command, re.IGNORECASE)
     if not match:
-        print("Game command format not recognized. Please try again.")
+        print("Command format not recognized.")
         return
     team1_str, win_type, team2_str = match.groups()
-    win_type = win_type.lower().strip()
+    win_type = win_type.lower()
     if win_type not in WIN_TYPE_MULTIPLIERS:
         print("Invalid win type.")
         return
     base_multiplier = WIN_TYPE_MULTIPLIERS[win_type]
-    # For simplicity, teams are parsed by separating on semicolon.
-    def parse_team(team_str):
-        if ";" in team_str:
-            names = [x.strip() for x in team_str.split(";")]
-            offense = [names[0]] if names else []
-            defense = names[1:] if len(names) > 1 else []
-        else:
-            offense = [team_str.strip()] if team_str.strip() else []
-            defense = []
-        return offense, defense
-
     team1_off, team1_def = parse_team(team1_str)
     team2_off, team2_def = parse_team(team2_str)
 
-    # Ensure players exist
     for name in team1_off + team1_def + team2_off + team2_def:
         get_or_create_player(name)
 
-    # Compute opponent rating averages
-    def get_average_rating(names, rating_type):
+    def get_average_rating(names, role):
         if not names:
             return None
-        total = 0
-        count = 0
-        for name in names:
-            player = get_or_create_player(name)
-            total += player[rating_type]
-            count += 1
-        return total // count if count else None
+        total = sum(get_or_create_player(name)[role] for name in names)
+        return total / len(names)
 
     opp_for_team1 = get_average_rating(team2_def, "defense") if team2_def else get_average_rating(team2_off, "offense")
     opp_off_team1 = get_average_rating(team2_off, "offense") if team2_off else get_average_rating(team2_def, "defense")
     opp_for_team2 = get_average_rating(team1_def, "defense") if team1_def else get_average_rating(team1_off, "offense")
     opp_off_team2 = get_average_rating(team1_off, "offense") if team1_off else get_average_rating(team1_def, "defense")
 
-    # Dummy rating updater: add or subtract a constant modified by multiplier.
-    def update_rating(current, win, opponent_rating, multiplier):
-        change = round(K_FACTOR * multiplier)
-        if win:
-            return current + change, change
-        else:
-            return current - change, -change
+    opp_for_team1 = opp_for_team1 or 1500
+    opp_off_team1 = opp_off_team1 or 1500
+    opp_for_team2 = opp_for_team2 or 1500
+    opp_off_team2 = opp_off_team2 or 1500
 
-    # Update winning team (team1)
+    print("--------------------------------------------------------------------------------")
     for name in team1_off:
         player = get_or_create_player(name)
-        new_off, _ = update_rating(player["offense"], 1, opp_for_team1 if opp_for_team1 is not None else 1500, base_multiplier)
+        new_off, change = update_rating(player["offense"], 1, opp_for_team1, base_multiplier)
+        print(f"{player['display']} Offense: {player['offense']} → {new_off} ({change:+.1f})")
         player["offense"] = new_off
         player["played"] += 1
         player["wins"] += 1
+
     for name in team1_def:
         player = get_or_create_player(name)
-        new_def, _ = update_rating(player["defense"], 1, opp_off_team1 if opp_off_team1 is not None else 1500, base_multiplier)
+        new_def, change = update_rating(player["defense"], 1, opp_off_team1, base_multiplier)
+        print(f"{player['display']} Defense: {player['defense']} → {new_def} ({change:+.1f})")
         player["defense"] = new_def
         player["played"] += 1
         player["wins"] += 1
 
-    # Update losing team (team2)
     for name in team2_off:
         player = get_or_create_player(name)
-        new_off, _ = update_rating(player["offense"], 0, opp_for_team2 if opp_for_team2 is not None else 1500, base_multiplier)
+        new_off, change = update_rating(player["offense"], 0, opp_for_team2, base_multiplier)
+        print(f"{player['display']} Offense: {player['offense']} → {new_off} ({change:+.1f})")
         player["offense"] = new_off
         player["played"] += 1
+
     for name in team2_def:
         player = get_or_create_player(name)
-        new_def, _ = update_rating(player["defense"], 0, opp_off_team2 if opp_off_team2 is not None else 1500, base_multiplier)
+        new_def, change = update_rating(player["defense"], 0, opp_off_team2, base_multiplier)
+        print(f"{player['display']} Defense: {player['defense']} → {new_def} ({change:+.1f})")
         player["defense"] = new_def
         player["played"] += 1
 
-    for key in players:
-        update_player_avg(key)
-        update_player_ranks(key)
-    save_data()
-    print("Game processed and ratings updated.")
+    team1_players = team1_off + team1_def
+    team2_players = team2_off + team2_def
 
-def process_add(command):
-    """
-    Process the 'add' command.
-    Format: 
-       add <name>
-    or 
-       add <name>, <offense>, <defense>, <played>, <wins>, <avg>, <rank_d>, <rank_o>, <rank_a>
-    """
-    info = command[3:].strip()  # remove "add"
-    if not info:
-        print("No player info provided.")
-        return
-    parts = [p.strip() for p in info.split(",")]
-    if len(parts) == 1:
-        name = parts[0]
-        get_or_create_player(name)
-        print(f"Player {name} added with default stats.")
-    elif len(parts) == 9:
-        try:
-            name = parts[0]
-            off = int(parts[1])
-            deff = int(parts[2])
-            played = int(parts[3])
-            wins = int(parts[4])
-            avg = int(parts[5])
-            rank_d = parts[6]
-            rank_o = parts[7]
-            rank_a = parts[8]
-        except ValueError:
-            print("Error: Incorrect format in add command.")
-            return
-        canon = canonicalize(name)
-        players[canon] = {
-            "display": name,
-            "offense": off,
-            "defense": deff,
-            "played": played,
-            "wins": wins,
-            "avg": avg,
-            "rank_d": rank_d,
-            "rank_o": rank_o,
-            "rank_a": rank_a
-        }
-        if "zhong" in canon:
-            players[canon]["rank_d"] = HIDDEN_RANK
-            players[canon]["rank_o"] = HIDDEN_RANK
-            players[canon]["rank_a"] = HIDDEN_RANK
-        print(f"Player {name} added with specified stats.")
-    else:
-        print("Wrong command format for add. Expect either 1 or 9 comma-separated fields after 'add'.")
+    team1_rates = []
+    for name in team1_players:
+        player = get_or_create_player(name)
+        role = "offense" if name in team1_off else "defense"
+        opp_rating = opp_for_team1 if role == "offense" else opp_off_team1
+        rate = calculate_expected_win_rate(player[role], opp_rating)
+        team1_rates.append(rate)
+        print(f"{player['display']} ({role[0].upper()}): {rate:.1f}%")
+
+    team2_rates = []
+    for name in team2_players:
+        player = get_or_create_player(name)
+        role = "offense" if name in team2_off else "defense"
+        opp_rating = opp_for_team2 if role == "offense" else opp_off_team2
+        rate = calculate_expected_win_rate(player[role], opp_rating)
+        team2_rates.append(rate)
+        print(f"{player['display']} ({role[0].upper()}): {rate:.1f}%")
+
+    avg_team1 = sum(team1_rates) / len(team1_rates) if team1_rates else 0
+    avg_team2 = sum(team2_rates) / len(team2_rates) if team2_rates else 0
+
+    team1_names = " + ".join([get_or_create_player(name)['display'] for name in team1_players])
+    team2_names = " + ".join([get_or_create_player(name)['display'] for name in team2_players])
+    print(f"\n{team1_names}: {avg_team1:.1f}% vs {team2_names}: {avg_team2:.1f}%")
+    print("--------------------------------------------------------------------------------")
+
     save_data()
 
-def process_combine(command):
-    """
-    Process the 'combine' command to merge two player records.
-    Format: combine <name1> , <name2>
-    """
-    info = command[7:].strip()  # remove "combine"
-    parts = [p.strip() for p in info.split(",")]
-    if len(parts) != 2:
-        print("Combine command requires two names separated by a comma.")
+def print_best_players():
+    if not players:
+        print("No player data available.")
         return
-    name1, name2 = parts
-    canon1 = canonicalize(name1)
-    canon2 = canonicalize(name2)
-    if canon1 not in players or canon2 not in players:
-        print("One of the players does not exist.")
-        return
-    merge_record(canon1, players[canon1]["display"], players[canon2]["offense"], players[canon2]["defense"], players[canon2]["played"], players[canon2]["wins"])
-    del players[canon2]
-    print(f"Players {name1} and {name2} combined.")
-    save_data()
-
-# --- Main command loop ---
+    best_avg = max(players.values(), key=lambda x: x["avg"])
+    best_off = max(players.values(), key=lambda x: x["offense"])
+    best_def = max(players.values(), key=lambda x: x["defense"])
+    most_played = max(players.values(), key=lambda x: x["played"])
+    highest_win = max(players.values(), key=lambda x: (x["wins"]/x["played"]) if x["played"] else 0)
+    
+    print("Best Players:")
+    print(f"  Best Average: {best_avg['display']} (A-{best_avg['avg']})")
+    print(f"  Best Offense: {best_off['display']} (O-{best_off['offense']})")
+    print(f"  Best Defense: {best_def['display']} (D-{best_def['defense']})")
+    print(f"  Most Played: {most_played['display']} (T-{most_played['played']})")
+    if highest_win["played"] > 0:
+        win_rate = (highest_win["wins"] / highest_win["played"]) * 100
+        print(f"  Highest Win Rate: {highest_win['display']} ({win_rate:.1f}%)")
 
 def main():
     load_data()
-    save_data()
-    print("Foosball Elo rating system started.")
-    print("Commands:")
-    print(" - <teama> <winType> <teamb>  (e.g., \"JustinCheng ; LarryZhong closewin ParkerHoppy ; ThayerMahan\")")
-    print(" - Type 'pp' to print player statistics (sorted by average rating).")
-    print(" - Type 'best' to show best players (with rank behind each best result).")
-    print(" - Type 'name' to show names alphabetically.")
-    print(" - Type 'add' to add a new player (e.g., \"add VictorXia\" or with full stats).")
-    print(" - Type 'combine' to combine two player stats (e.g., \"combine Player1 , Player2\").")
-    print(" - Type 'rank <criteria>' to display rankings. Criteria: a, o, d, t, r, a-rank, o-rank, d-rank.")
-    print(" - Type 'exit' to quit.")
+    print("Foosball ELO System")
+    print("Commands: game, pp, best, exit")
     while True:
-        command = input("Enter command: ").strip()
-        if command.lower() == "exit":
-            print("Exiting...")
+        cmd = input("> ").strip()
+        if cmd.lower() == "exit":
+            save_data()
             break
-        elif command.lower() == "pp":
+        elif cmd.lower() == "pp":
             print_players()
-        elif command.lower() == "best":
+        elif cmd.lower() == "best":
             print_best_players()
-        elif command.lower() == "name":
-            print_players_alphabetically()
-        elif command.lower().startswith("add "):
-            process_add(command)
-        elif command.lower().startswith("combine"):
-            process_combine(command)
-        elif command.lower().startswith("rank"):
-            tokens = command.split()
-            if len(tokens) == 2:
-                print_rank_cmd(tokens[1].lower())
-            else:
-                print("Rank command requires a single criteria (e.g., rank a).")
-        elif command == "":
-            continue
         else:
-            process_game(command)
+            process_game(cmd)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
