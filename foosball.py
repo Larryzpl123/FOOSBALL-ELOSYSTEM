@@ -35,7 +35,7 @@ RANK_THRESHOLDS = [
     (200, "copper"),
     (150, "bronze"),
     (125, "steel"),
-    (0,   "darkness")
+    (99,   "iron")
 ]
 
 # Special values for hidden and special ranks.
@@ -44,8 +44,8 @@ SPECIAL_IM = "im"   # special flag printed as "importal"
 
 # Order for comparing ranking strings (the full words). 
 RANK_ORDER = {
-    "darkness": 0,
-    "iron": 1,
+    "iron": 0,
+    "steel": 1,
     "bronze": 2,
     "copper": 3,
     "silver": 4,
@@ -64,8 +64,8 @@ RANK_ORDER = {
 
 # Dictionary for converting a full rank to its initial letter.
 RANK_INITIAL = {
-    "darkness": "a",
     "iron": "i",
+    "steel": "t",
     "copper": "c",
     "silver": "s",
     "gold": "g",
