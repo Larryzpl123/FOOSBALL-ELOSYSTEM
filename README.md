@@ -58,7 +58,7 @@ The following commands are available for interacting with the system:
 example : pp
 <br/>
 <br/>
-![pp](/pp.png "pp")
+![pp](/pp.png)
 
 ---
 
