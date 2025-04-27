@@ -56,9 +56,9 @@ The following commands are available for interacting with the system:
 - `exit`: Save changes and quit the program.
 <br/>
 example : pp
-<br/>
-<br/>
-![pp](/pp.png)
+<br/><br/>
+
+![pp](/pp.img "pp")
 
 ---
 
