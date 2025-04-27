@@ -54,6 +54,11 @@ The following commands are available for interacting with the system:
 - `name`: Print player names in alphabetical order.
 - `combine a to b`: Merge player statistics from one player to another.
 - `exit`: Save changes and quit the program.
+<br/>
+example : pp
+<br/>
+<br/>
+![pp](/pp.png "pp")
 
 ---
 
