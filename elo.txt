@@ -1,9 +1,9 @@
 GraysonHou, 827, 219, 101, 76, 523, copper, plat, gold.
-JeanLuc, 252, 611, 44, 70, 432, gold, silver, silver.
+JeanLuc, 252, 648, 46, 72, 450, gold, silver, gold.
 JustinCheng, 524, 326, 72, 53, 425, silver, gold, silver.
-LincolnGambol, 171, 670, 40, 98, 420, gold, bronze, silver.
-BradyGriffin, 675, 162, 45, 93, 418, bronze, gold, silver.
+BradyGriffin, 674, 162, 47, 91, 418, bronze, gold, silver.
 WilliamGao, 635, 192, 103, 60, 414, bronze, gold, silver.
+LincolnGambol, 171, 647, 41, 95, 409, gold, bronze, silver.
 LarryZhong, 418, 369, 12, 50, 394, lz, lz, lz.
 SamuelLi, 386, 392, 47, 62, 389, silver, silver, silver.
 AustinLiu, 319, 393, 70, 39, 356, silver, silver, silver.
@@ -16,11 +16,12 @@ ThayerMahan, 187, 170, 12, 58, 178, bronze, bronze, bronze.
 NoahRosenfield, 198, 150, 8, 38, 174, bronze, bronze, bronze.
 Gabe, 232, 100, 11, 36, 166, bronze, copper, bronze.
 Jacob, 150, 152, 7, 29, 151, bronze, bronze, bronze.
-Anonymous, 200, 100, 30, 7, 150, iron, copper, bronze.
+Anonymous, 200, 100, 31, 6, 150, iron, copper, bronze.
 JeffJin, 194, 100, 21, 62, 147, iron, bronze, steel.
 ParkerHoppy, 143, 150, 8, 75, 146, bronze, bronze, bronze.
 JeffersonWei, 169, 100, 8, 75, 134, iron, copper, steel.
 ArthurYu, 150, 114, 4, 50, 132, iron, bronze, steel.
+GraysonHou ， WilliamGao, 165, 100, 1, 100, 132, iron, bronze, steel.
 Larry, 152, 100, 11, 9, 126, iron, bronze, steel.
 Dominic, 100, 150, 3, 33, 125, bronze, iron, steel.
 JasperChapman, 116, 100, 1, 100, 108, iron, iron, iron.
