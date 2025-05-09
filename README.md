@@ -10,19 +10,9 @@ This documentation provides an overview of a simple foosball Elo system, detaili
 - **index.html**: The scoreboard displaying player rankings and statistics.
 - **2index.html**: The online execution file for real-time updates and interactions.
 - **elo.txt**: The database file storing player information and Elo ratings.
+- **images**： Other Images
 
 ---
-
-## Auto-Functions
-
-### Name Normalization & Merging
-
-The system automatically normalizes player names to ensure consistent representation. Variations such as:
-- “LarryZhong”
-- “Larry Zhong”
-- “Larry_Zhong”
-
-are merged into a single entry to maintain accurate statistics.
 
 ### Ranks
 
