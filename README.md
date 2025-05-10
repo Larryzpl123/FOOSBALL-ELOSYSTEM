@@ -1,5 +1,7 @@
 # Foosball Elo System Documentation
 
+[For Full Document](https://docs.google.com/document/d/1HumdWiXkus08E6xCJvwAiqdwlruyd_IbUSk8i8qvNzI/edit?usp=sharing)
+
 ## Overview
 
 This documentation provides an overview of a simple foosball Elo system, detailing its components, functionality, and the underlying mathematical principles of the Elo rating algorithm and Fibonacci protection.
