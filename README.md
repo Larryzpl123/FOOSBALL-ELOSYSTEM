@@ -87,6 +87,8 @@ Fibonacci protection is a method used to stabilize player ratings and prevent dr
 1. **Adjustment Limits**: The maximum adjustment after a game is determined by the Fibonacci numbers, which grow exponentially. This means that as players' ratings increase, their ratings become less volatile.
 2. **Mathematics of Fibonacci**: The sequence starts as 0, 1, 1, 2, 3, 5, 8, 13, etc. If a player's current rating is high, the maximum adjustment is limited to the next Fibonacci number below a certain threshold. This protects high-rated players from losing too many points in a single match and stabilizes the overall rating system.
 
+[For Full Document](https://docs.google.com/document/d/1HumdWiXkus08E6xCJvwAiqdwlruyd_IbUSk8i8qvNzI/edit?usp=sharing)
+
 ---
 
 ## Conclusion
