@@ -1,6 +1,7 @@
 # Foosball Elo System Documentation
 
 [For Full Document](https://docs.google.com/document/d/1HumdWiXkus08E6xCJvwAiqdwlruyd_IbUSk8i8qvNzI/edit?usp=sharing)
+[ScoreBoard](https://larryzpl123.github.io/FOOSBALL-ELOSYSTEM/index.html)
 
 ## Overview
 
@@ -92,5 +93,7 @@ Fibonacci protection is a method used to stabilize player ratings and prevent dr
 ## Conclusion
 
 This foosball Elo system combines robust player rating mechanics with automatic normalization and ranking features to provide an engaging and fair competition environment. The mathematical principles behind the Elo algorithm and Fibonacci protection ensure that ratings reflect true player skill while minimizing volatility.
+
+[ScoreBoard](https://larryzpl123.github.io/FOOSBALL-ELOSYSTEM/index.html)
 
 [For Full Document](https://docs.google.com/document/d/1HumdWiXkus08E6xCJvwAiqdwlruyd_IbUSk8i8qvNzI/edit?usp=sharing)
