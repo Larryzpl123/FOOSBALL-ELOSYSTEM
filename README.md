@@ -1,6 +1,7 @@
 # Foosball Elo System Documentation
 
 [For Full Document](https://docs.google.com/document/d/1HumdWiXkus08E6xCJvwAiqdwlruyd_IbUSk8i8qvNzI/edit?usp=sharing)
+
 [ScoreBoard](https://larryzpl123.github.io/FOOSBALL-ELOSYSTEM/index.html)
 
 ## Overview
