@@ -27,6 +27,6 @@ RyanH, 116, 100, 3, 67, 108, iron, iron, iron.
 Steven, 112, 100, 10, 40, 106, iron, iron, iron.
 Liam, 100, 110, 11, 36, 105, iron, iron, iron.
 Cade, 109, 100, 1, 100, 104, iron, iron, iron.
-PrestonPhillis, 104, 104, 1, 100, 104, iron, iron, iron.
+Preston, 125, 125, 1, 125, 104, steel, steel, steel.
 Ryan, 107, 100, 2, 50, 104, iron, iron, iron.
 Julian, 100, 100, 3, 0, 100, iron, iron, iron.
