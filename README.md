@@ -91,11 +91,11 @@ Fibonacci protection is a method used to stabilize player ratings and prevent dr
 
 ### Score Board
 
-![scoreboard](/Related%20Documents/Score%20Board.png "ScoreBoard")
+![scoreboard](/Related%20Documents/ScoreBoard.png "ScoreBoard")
 
 ### HTML OL
 
-![HTMLOL](/Related%20Documents/HTML%20OL.png "HtmlOl")
+![HTMLOL](/Related%20Documents/htmlol.png "HtmlOl")
 
 ---
 
