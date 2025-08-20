@@ -194,10 +194,11 @@ def get_or_create_player(name):
             "rank_o": get_computed_rank(RATING_MIN),
             "rank_a": get_computed_rank(RATING_MIN)
         }
-        if "zhong" in key:
-            players[key]["rank_d"] = HIDDEN_RANK
-            players[key]["rank_o"] = HIDDEN_RANK
-            players[key]["rank_a"] = HIDDEN_RANK
+        #Larry's Special Processing part
+        #if "zhong" in key:
+            #players[key]["rank_d"] = HIDDEN_RANK
+            #players[key]["rank_o"] = HIDDEN_RANK
+            #players[key]["rank_a"] = HIDDEN_RANK
     return players[key]
 
 def load_data():
@@ -500,11 +501,11 @@ class FoosballGUI(tk.Tk):
         side_frame = tk.Frame(self, bg='#add8e6')
         side_frame.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
 
-        tk.Button(side_frame, text="Show All Players", command=lambda: self.process_predef("pp"), bg='#4caf50', fg='white', font=('Arial', 12), width=15).pack(pady=5)
-        tk.Button(side_frame, text="Show Best Players", command=lambda: self.process_predef("best"), bg='#4caf50', fg='white', font=('Arial', 12), width=15).pack(pady=5)
-        tk.Button(side_frame, text="List Names", command=lambda: self.process_predef("name"), bg='#4caf50', fg='white', font=('Arial', 12), width=15).pack(pady=5)
-        tk.Button(side_frame, text="Combine Players", command=self.combine_dialog, bg='#2196f3', fg='white', font=('Arial', 12), width=15).pack(pady=5)
-        tk.Button(side_frame, text="Add Game", command=self.game_dialog, bg='#2196f3', fg='white', font=('Arial', 12), width=15).pack(pady=5)
+        tk.Button(side_frame, text="Show All Players", command=lambda: self.process_predef("pp"), bg='#4caf50', fg='grey', font=('Arial', 12), width=15).pack(pady=5)
+        tk.Button(side_frame, text="Show Best Players", command=lambda: self.process_predef("best"), bg='#4caf50', fg='grey', font=('Arial', 12), width=15).pack(pady=5)
+        tk.Button(side_frame, text="List Names", command=lambda: self.process_predef("name"), bg='#4caf50', fg='grey', font=('Arial', 12), width=15).pack(pady=5)
+        tk.Button(side_frame, text="Combine Players", command=self.combine_dialog, bg='#2196f3', fg='grey', font=('Arial', 12), width=15).pack(pady=5)
+        tk.Button(side_frame, text="Add Game", command=self.game_dialog, bg='#2196f3', fg='grey', font=('Arial', 12), width=15).pack(pady=5)
 
         # Main frame
         main_frame = tk.Frame(self, bg='#add8e6')
@@ -523,13 +524,13 @@ class FoosballGUI(tk.Tk):
         self.entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         self.entry.bind("<KeyRelease>", self.update_suggestions)
 
-        submit_btn = tk.Button(input_frame, text="Submit", command=self.process_command, bg='#4caf50', fg='white', font=('Arial', 12))
+        submit_btn = tk.Button(input_frame, text="Submit", command=self.process_command, bg='#4caf50', fg='grey', font=('Arial', 12))
         submit_btn.pack(side=tk.LEFT, padx=5)
-        quit_btn = tk.Button(input_frame, text="Quit", command=self.quit_app, bg='#f44336', fg='white', font=('Arial', 12))
+        quit_btn = tk.Button(input_frame, text="Quit", command=self.quit_app, bg='#f44336', fg='grey', font=('Arial', 12))
         quit_btn.pack(side=tk.LEFT, padx=5)
 
         # Suggestion listbox
-        self.suggestion_list = tk.Listbox(main_frame, height=5, font=('Arial', 12), bg='white')
+        self.suggestion_list = tk.Listbox(main_frame, height=5, font=('Arial', 12), bg='grey')
         self.suggestion_list.bind("<Double-Button-1>", self.insert_suggestion)
         # Initially not packed
 
@@ -636,7 +637,7 @@ class FoosballGUI(tk.Tk):
             self.output.insert(tk.END, output + "\n\n")
             self.output.see(tk.END)
             dialog.destroy()
-        tk.Button(dialog, text="Combine", command=do_combine, bg='#2196f3', fg='white', font=('Arial', 12)).pack(pady=10)
+        tk.Button(dialog, text="Combine", command=do_combine, bg='#2196f3', fg='grey', font=('Arial', 12)).pack(pady=10)
 
     def game_dialog(self):
         dialog = tk.Toplevel(self)
@@ -664,7 +665,7 @@ class FoosballGUI(tk.Tk):
             self.output.insert(tk.END, output + "\n\n")
             self.output.see(tk.END)
             dialog.destroy()
-        tk.Button(dialog, text="Process Game", command=do_game, bg='#2196f3', fg='white', font=('Arial', 12)).pack(pady=10)
+        tk.Button(dialog, text="Process Game", command=do_game, bg='#2196f3', fg='grey', font=('Arial', 12)).pack(pady=10)
 
     def quit_app(self):
         save_data()
