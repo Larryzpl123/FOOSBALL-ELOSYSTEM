@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
+
 import math
 import os
 import re
 import random
 import string
+import tkinter as tk
+from tkinter import ttk, scrolledtext, messagebox
+from tkinter.font import Font
 
 # Global constants
 FILE_NAME = "elo.txt"
@@ -255,20 +259,14 @@ def save_data():
             line = f"{data['display']}, {data['offense']}, {data['defense']}, {played}, {win_rate}, {data['avg']}, {data.get('rank_d', 'iron')}, {data.get('rank_o', 'iron')}, {data.get('rank_a', 'iron')}.\n"
             f.write(line)
 
-def print_players(filter_rank=None):
+def get_players_data(filter_rank=None):
     if not players:
-        print("No player data available.")
-        return
-    print("rank thresholds (ranks don't drop):")
-    print("iron: 100, bronze: 150, copper: 200, silver: 250, gold: 450,")
-    print("platinum: 850, jade: 1234, emerald: 1650, diamond: 2222,")
-    print("master:2468, super/grand-master:2666/2900, ultra: 2999.")
+        return []
     
     valid_ranks = [rank for (_, rank) in RANK_THRESHOLDS]
     if filter_rank is not None:
         if filter_rank not in valid_ranks:
-            print(f"Invalid rank '{filter_rank}'. Valid ranks are: {', '.join(valid_ranks)}.")
-            return
+            return []
         filtered_players = []
         for key, data in players.items():
             ranks = [data.get("rank_o", "iron"), data.get("rank_d", "iron"), data.get("rank_a", "iron")]
@@ -282,9 +280,7 @@ def print_players(filter_rank=None):
     else:
         sorted_list = sorted(players.items(), key=lambda kv: (-kv[1]["avg"], kv[1]["display"]))
     
-    header = f"{'No.':<3}  {'Name':<15}  {'Avg':>5}  {'Off':>5}  {'Def':>5}  {'T':>3}  {'Win%':>5}  {'Rank (Highest a/o/d)':<15}"
-    print(header)
-    print("-" * len(header))
+    result = []
     for idx, (key, data) in enumerate(sorted_list, start=1):
         played = data["played"]
         wins = data["wins"]
@@ -292,7 +288,9 @@ def print_players(filter_rank=None):
         overall_rank = highest_overall_rank(key)
         indicator = get_rank_indicator(key)
         rank_display = overall_rank + indicator
-        print(f"{idx:<3}  {data['display']:<15}  {data['avg']:>5}  {data['offense']:>5}  {data['defense']:>5}  {played:>3}  {win_rate:>5}  {rank_display:<15}")
+        result.append((idx, data['display'], data['avg'], data['offense'], data['defense'], played, win_rate, rank_display))
+    
+    return result
 
 def calculate_expected_win_rate(player_rating, opponent_rating):
     expected = 1 / (1 + math.pow(10, (opponent_rating - player_rating) / 400))
@@ -308,191 +306,7 @@ def parse_team(team_str):
         defense_players = []
     return offense_players, defense_players
 
-def process_game(command):
-    pattern = r"^(.*?)\s*(win|smallwin|closewin|bigwin|perfectwin)\s*(.*?)$"
-    match = re.match(pattern, command, re.IGNORECASE)
-    if not match:
-        print("Command format not recognized.")
-        return
-    team1_str, win_type, team2_str = match.groups()
-    win_type = win_type.lower()
-    if win_type not in WIN_TYPE_MULTIPLIERS:
-        print("Invalid win type.")
-        return
-
-    base_multiplier = WIN_TYPE_MULTIPLIERS[win_type]
-    team1_off, team1_def = parse_team(team1_str)
-    team2_off, team2_def = parse_team(team2_str)
-
-    # Ensure all players are created in our records.
-    for name in team1_off + team1_def + team2_off + team2_def:
-        get_or_create_player(name)
-
-    def get_average_rating(names, role):
-        if not names:
-            return None
-        total = sum(get_or_create_player(name)[role] for name in names)
-        return total / len(names)
-
-    # Calculate opponent averages.
-    opp_for_team1 = get_average_rating(team2_def, "defense") if team2_def else get_average_rating(team2_off, "offense")
-    opp_off_team1 = get_average_rating(team2_off, "offense") if team2_off else get_average_rating(team2_def, "defense")
-    opp_for_team2 = get_average_rating(team1_def, "defense") if team1_def else get_average_rating(team1_off, "offense")
-    opp_off_team2 = get_average_rating(team1_off, "offense") if team1_off else get_average_rating(team1_def, "defense")
-
-    print("--------------------------------------------------------------------------------")
-    print("Expected win rates:")
-    # Calculate win rates based on current ratings.
-    team1_rates = []
-    for name in team1_off:
-        player = get_or_create_player(name)
-        rate = calculate_expected_win_rate(player["offense"], opp_for_team1)
-        team1_rates.append(rate)
-        print(f"{player['display']} (O): {rate:.1f}%")
-
-    for name in team1_def:
-        player = get_or_create_player(name)
-        rate = calculate_expected_win_rate(player["defense"], opp_off_team1)
-        team1_rates.append(rate)
-        print(f"{player['display']} (D): {rate:.1f}%")
-
-    team2_rates = []
-    for name in team2_off:
-        player = get_or_create_player(name)
-        rate = calculate_expected_win_rate(player["offense"], opp_for_team2)
-        team2_rates.append(rate)
-        print(f"{player['display']} (O): {rate:.1f}%")
-
-    for name in team2_def:
-        player = get_or_create_player(name)
-        rate = calculate_expected_win_rate(player["defense"], opp_off_team2)
-        team2_rates.append(rate)
-        print(f"{player['display']} (D): {rate:.1f}%")
-
-    avg_team1 = sum(team1_rates) / len(team1_rates) if team1_rates else 0
-    avg_team2 = sum(team2_rates) / len(team2_rates) if team2_rates else 0
-
-    team1_names = " + ".join([get_or_create_player(name)['display'] for name in (team1_off + team1_def)])
-    team2_names = " + ".join([get_or_create_player(name)['display'] for name in (team2_off + team2_def)])
-    print(f"\n{team1_names}: {avg_team1:.1f}% vs {team2_names}: {avg_team2:.1f}%")
-    print("--------------------------------------------------------------------------------")
-
-    # Now process the score changes by updating the ratings.
-    for name in team1_off:
-        player = get_or_create_player(name)
-        new_off, change = update_rating(player["offense"], 1, opp_for_team1, base_multiplier)
-        print(f"{player['display']} Offense: {player['offense']} → {new_off} ({change:+.1f})")
-        player["offense"] = new_off
-        player["played"] += 1
-        player["wins"] += 1
-
-    for name in team1_def:
-        player = get_or_create_player(name)
-        new_def, change = update_rating(player["defense"], 1, opp_off_team1, base_multiplier)
-        print(f"{player['display']} Defense: {player['defense']} → {new_def} ({change:+.1f})")
-        player["defense"] = new_def
-        player["played"] += 1
-        player["wins"] += 1
-
-    for name in team2_off:
-        player = get_or_create_player(name)
-        new_off, change = update_rating(player["offense"], 0, opp_for_team2, base_multiplier)
-        print(f"{player['display']} Offense: {player['offense']} → {new_off} ({change:+.1f})")
-        player["offense"] = new_off
-        player["played"] += 1
-
-    for name in team2_def:
-        player = get_or_create_player(name)
-        new_def, change = update_rating(player["defense"], 0, opp_off_team2, base_multiplier)
-        print(f"{player['display']} Defense: {player['defense']} → {new_def} ({change:+.1f})")
-        player["defense"] = new_def
-        player["played"] += 1
-
-    save_data()
-
-def print_best_players():
-    if not players:
-        print("No player data available.")
-        return
-    best_avg = max(players.values(), key=lambda x: x["avg"])
-    best_off = max(players.values(), key=lambda x: x["offense"])
-    best_def = max(players.values(), key=lambda x: x["defense"])
-    most_played = max(players.values(), key=lambda x: x["played"])
-    highest_win = max(players.values(), key=lambda x: (x["wins"]/x["played"]) if x["played"] else 0)
-    
-    print("  Best Players:")
-    print(f"  Best Average: {best_avg['display']} (A-{best_avg['avg']})")
-    print(f"  Best Offense: {best_off['display']} (O-{best_off['offense']})")
-    print(f"  Best Defense: {best_def['display']} (D-{best_def['defense']})")
-    print(f"  Most Played: {most_played['display']} (T-{most_played['played']})")
-    if highest_win["played"] > 0:
-        win_rate = (highest_win["wins"] / highest_win["played"]) * 100
-        print(f"  Highest Win Rate: {highest_win['display']} ({win_rate:.1f}%)")
-    print("  Best Teams:")
-    print("  1 - GraysonHou ; LarryZhong")
-    print("  2 - WilliamGao ; AustinLiu")
-    print("  3 - Gabe ; CarsonDavis")
-
-def process_combine_command(command):
-    """
-    Process the command to combine two player records.
-    Expected command format:
-         combine a to b.
-    This merges player 'a' into player 'b' (b remains the main record,
-    including its display name and highest rank). After merging, player a is removed.
-    """
-    import re
-    pattern = r"^combine\s+(.*?)\s+to\s+(.*?)\.?$"
-    match = re.match(pattern, command, re.IGNORECASE)
-    if not match:
-        print("Invalid format. Use: combine a to b.")
-        return
-    src_name = match.group(1).strip()
-    dest_name = match.group(2).strip()
-    src_key = canonicalize(src_name)
-    dest_key = canonicalize(dest_name)
-    if src_key not in players:
-        print(f"Player '{src_name}' not found.")
-        return
-    if dest_key not in players:
-        print(f"Player '{dest_name}' not found.")
-        return
-    # Merge the source record into destination.
-    # Use the preexisting merge_record function.
-    merge_record(
-        dest_key,
-        players[dest_key]["display"],  # keep dest display name
-        players[src_key]["offense"],
-        players[src_key]["defense"],
-        players[src_key]["played"],
-        players[src_key]["wins"]
-    )
-    # Remove the source player.
-    del players[src_key]
-    print(f"Combined '{src_name}' into '{dest_name}' (main record remains as '{dest_name}').")
-
-def process_name_command():
-    """
-    Process the 'name' command.
-    Prints all player names in alphabetical order along with their stats:
-      - Average rating (avg)
-      - Offense rating (off)
-      - Defense rating (def)
-      - Times played (T)
-      - Win percentage (Win%)
-    """
-    if not players:
-        print("No player data available.")
-        return
-    sorted_list = sorted(players.items(), key=lambda kv: kv[1]["display"].lower())
-    print("Name, Average, Offense, Defense, Games Played, Win%")
-    for key, data in sorted_list:
-        played = data.get("played", 0)
-        win_rate = round((data["wins"] / played) * 100) if played > 0 else 0
-        print(f"{data['display']}: A-{data['avg']}, O-{data['offense']}, D-{data['defense']}, T-{played}, R-{win_rate}%")
-
 def adjust_opponent_rating(opposition_rating, curr_rating):
-    # 假设这是一个已有的对手评分调整函数
     return opposition_rating
 
 # Adjust change, Numero di Fibonacci protection 斐波那契数列排位保护机制
@@ -527,32 +341,265 @@ def update_rating(curr_rating, score, opposition_rating, multiplier):
     
     return new_rating, change
 
+class ELOSystemGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("🏆 Foosball ELO System")
+        self.root.geometry("1200x800")
+        self.root.configure(bg='#1e1e2e')
+        
+        # Load data on startup
+        load_data()
+        
+        # Style configuration
+        self.setup_styles()
+        
+        # Create main layout
+        self.create_layout()
+        
+        # Command suggestions
+        self.command_suggestions = []
+        self.current_suggestions = []
+        
+        # Bind events
+        self.setup_bindings()
+        
+        # Initial display
+        self.refresh_display()
 
-def main():
-    load_data()
-    print("Foosball ELO System")
-    print("Commands: pp, best, combine, name, exit")
-    while True:
-        cmd = input("> ").strip()
-        if cmd.lower() == "exit":
-            save_data()
-            break
-        # In the main() function, modify the command handling:
-        elif cmd.lower().startswith("pp"):
-            parts = cmd.strip().split()
-            if len(parts) == 1:
-                print_players()
-            else:
-                filter_rank = parts[1].lower()
-                print_players(filter_rank)
-        elif cmd.lower() == "best":
-            print_best_players()
-        elif cmd.lower().startswith("combine"):
-            process_combine_command(cmd)  # Use 'cmd' here
-        elif cmd.lower() == "name":  # Use 'cmd' here
-            process_name_command()
-        else:
-            process_game(cmd)
+    def setup_styles(self):
+        style = ttk.Style()
+        style.theme_use('clam')
+        
+        # Configure colors
+        style.configure('Title.TLabel', font=('Arial', 16, 'bold'), foreground='#89b4fa', background='#1e1e2e')
+        style.configure('Header.TLabel', font=('Arial', 12, 'bold'), foreground='#cdd6f4', background='#313244')
+        style.configure('Custom.TButton', font=('Arial', 10, 'bold'), foreground='#1e1e2e')
+        style.configure('Treeview', background='#313244', foreground='#cdd6f4', fieldbackground='#313244')
+        style.configure('Treeview.Heading', background='#45475a', foreground='#cdd6f4', font=('Arial', 10, 'bold'))
 
-if __name__ == "__main__":
-    main()
+    def create_layout(self):
+        # Main container
+        main_frame = tk.Frame(self.root, bg='#1e1e2e')
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Title
+        title_label = ttk.Label(main_frame, text="🏆 Foosball ELO System", style='Title.TLabel')
+        title_label.pack(pady=(0, 20))
+        
+        # Create notebook for tabs
+        self.notebook = ttk.Notebook(main_frame)
+        self.notebook.pack(fill=tk.BOTH, expand=True)
+        
+        # Players tab
+        self.create_players_tab()
+        
+        # Game input tab
+        self.create_game_tab()
+        
+        # Command line tab
+        self.create_command_tab()
+
+    def create_players_tab(self):
+        players_frame = tk.Frame(self.notebook, bg='#1e1e2e')
+        self.notebook.add(players_frame, text="📊 Players")
+        
+        # Control panel
+        control_frame = tk.Frame(players_frame, bg='#1e1e2e')
+        control_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        # Rank filter
+        tk.Label(control_frame, text="Filter by rank:", bg='#1e1e2e', fg='#cdd6f4', font=('Arial', 10)).pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.rank_filter = ttk.Combobox(control_frame, values=['All'] + [rank for _, rank in RANK_THRESHOLDS], width=15)
+        self.rank_filter.set('All')
+        self.rank_filter.pack(side=tk.LEFT, padx=(0, 10))
+        self.rank_filter.bind('<<ComboboxSelected>>', self.on_rank_filter_change)
+        
+        # Refresh button
+        refresh_btn = ttk.Button(control_frame, text="🔄 Refresh", command=self.refresh_display, style='Custom.TButton')
+        refresh_btn.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Best players button
+        best_btn = ttk.Button(control_frame, text="🏅 Show Best", command=self.show_best_players, style='Custom.TButton')
+        best_btn.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Export names button
+        names_btn = ttk.Button(control_frame, text="📋 Export Names", command=self.show_names, style='Custom.TButton')
+        names_btn.pack(side=tk.LEFT)
+        
+        # Players table
+        self.create_players_table(players_frame)
+        
+        # Info panel
+        self.create_info_panel(players_frame)
+
+    def create_players_table(self, parent):
+        # Table frame
+        table_frame = tk.Frame(parent, bg='#1e1e2e')
+        table_frame.pack(fill=tk.BOTH, expand=True, padx=10)
+        
+        # Treeview
+        columns = ('No.', 'Name', 'Avg', 'Off', 'Def', 'Games', 'Win%', 'Rank')
+        self.players_tree = ttk.Treeview(table_frame, columns=columns, show='headings', height=15)
+        
+        # Configure columns
+        self.players_tree.heading('No.', text='No.')
+        self.players_tree.heading('Name', text='Name')
+        self.players_tree.heading('Avg', text='Avg')
+        self.players_tree.heading('Off', text='Off')
+        self.players_tree.heading('Def', text='Def')
+        self.players_tree.heading('Games', text='Games')
+        self.players_tree.heading('Win%', text='Win%')
+        self.players_tree.heading('Rank', text='Rank')
+        
+        # Column widths
+        self.players_tree.column('No.', width=50, anchor='center')
+        self.players_tree.column('Name', width=150, anchor='w')
+        self.players_tree.column('Avg', width=70, anchor='center')
+        self.players_tree.column('Off', width=70, anchor='center')
+        self.players_tree.column('Def', width=70, anchor='center')
+        self.players_tree.column('Games', width=70, anchor='center')
+        self.players_tree.column('Win%', width=70, anchor='center')
+        self.players_tree.column('Rank', width=150, anchor='w')
+        
+        # Scrollbar
+        scrollbar = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.players_tree.yview)
+        self.players_tree.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack
+        self.players_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    def create_info_panel(self, parent):
+        info_frame = tk.Frame(parent, bg='#313244', relief=tk.RAISED, bd=1)
+        info_frame.pack(fill=tk.X, padx=10, pady=(10, 0))
+        
+        info_label = ttk.Label(info_frame, text="ℹ️ Rank Thresholds", style='Header.TLabel')
+        info_label.pack(pady=5)
+        
+        thresholds_text = ("iron: 100, bronze: 150, copper: 200, silver: 250, gold: 450, "
+                          "platinum: 850, jade: 1234, emerald: 1650, diamond: 2222, "
+                          "master: 2468, super/grand-master: 2666/2900, ultra: 2999")
+        
+        info_content = tk.Label(info_frame, text=thresholds_text, bg='#313244', fg='#cdd6f4', 
+                               font=('Arial', 9), wraplength=1000, justify=tk.LEFT)
+        info_content.pack(padx=10, pady=(0, 10))
+
+    def create_game_tab(self):
+        game_frame = tk.Frame(self.notebook, bg='#1e1e2e')
+        self.notebook.add(game_frame, text="⚽ New Game")
+        
+        # Title
+        title = ttk.Label(game_frame, text="🎮 Record New Game", style='Title.TLabel')
+        title.pack(pady=20)
+        
+        # Input frame
+        input_frame = tk.Frame(game_frame, bg='#313244', relief=tk.RAISED, bd=2)
+        input_frame.pack(padx=50, pady=20, fill=tk.X)
+        
+        # Team 1 input
+        tk.Label(input_frame, text="Team 1 (Winners):", bg='#313244', fg='#a6e3a1', 
+                font=('Arial', 12, 'bold')).pack(anchor=tk.W, padx=20, pady=(20, 5))
+        
+        self.team1_entry = tk.Entry(input_frame, font=('Arial', 11), width=60, bg='#45475a', fg='#cdd6f4',
+                                   insertbackground='#cdd6f4', relief=tk.FLAT, bd=5)
+        self.team1_entry.pack(padx=20, pady=(0, 10))
+        
+        # Win type selection
+        tk.Label(input_frame, text="Win Type:", bg='#313244', fg='#cdd6f4', 
+                font=('Arial', 12, 'bold')).pack(anchor=tk.W, padx=20, pady=(10, 5))
+        
+        win_frame = tk.Frame(input_frame, bg='#313244')
+        win_frame.pack(padx=20, pady=(0, 10))
+        
+        self.win_type = tk.StringVar(value='win')
+        win_types = [
+            ('win', 'Regular Win (1.0x)', '#89b4fa'),
+            ('smallwin', 'Small Win (0.75x)', '#94e2d5'),
+            ('closewin', 'Close Win (0.5x)', '#f9e2af'),
+            ('bigwin', 'Big Win (1.25x)', '#fab387'),
+            ('perfectwin', 'Perfect Win (1.5x)', '#f38ba8')
+        ]
+        
+        for i, (value, text, color) in enumerate(win_types):
+            row = i // 3
+            col = i % 3
+            rb = tk.Radiobutton(win_frame, text=text, variable=self.win_type, value=value,
+                               bg='#313244', fg=color, selectcolor='#45475a', 
+                               font=('Arial', 10), activebackground='#313244')
+            rb.grid(row=row, column=col, sticky=tk.W, padx=10, pady=2)
+        
+        # Team 2 input
+        tk.Label(input_frame, text="Team 2 (Losers):", bg='#313244', fg='#f38ba8', 
+                font=('Arial', 12, 'bold')).pack(anchor=tk.W, padx=20, pady=(20, 5))
+        
+        self.team2_entry = tk.Entry(input_frame, font=('Arial', 11), width=60, bg='#45475a', fg='#cdd6f4',
+                                   insertbackground='#cdd6f4', relief=tk.FLAT, bd=5)
+        self.team2_entry.pack(padx=20, pady=(0, 20))
+        
+        # Instructions
+        instructions = ("Format: player1, player2 OR offense_players ; defense_players\n"
+                       "Example: John, Mary OR John, Mary ; Bob, Alice")
+        tk.Label(input_frame, text=instructions, bg='#313244', fg='#6c7086', 
+                font=('Arial', 9), justify=tk.CENTER).pack(pady=(0, 15))
+        
+        # Submit button
+        submit_btn = ttk.Button(input_frame, text="🏆 Record Game", command=self.process_gui_game, 
+                               style='Custom.TButton')
+        submit_btn.pack(pady=(0, 20))
+        
+        # Results area
+        self.game_results = scrolledtext.ScrolledText(game_frame, height=15, bg='#45475a', fg='#cdd6f4',
+                                                     font=('Consolas', 10), insertbackground='#cdd6f4')
+        self.game_results.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+    def create_command_tab(self):
+        command_frame = tk.Frame(self.notebook, bg='#1e1e2e')
+        self.notebook.add(command_frame, text="💻 Command Line")
+        
+        # Title
+        title = ttk.Label(command_frame, text="💻 Command Line Interface", style='Title.TLabel')
+        title.pack(pady=20)
+        
+        # Quick commands
+        quick_frame = tk.Frame(command_frame, bg='#313244', relief=tk.RAISED, bd=2)
+        quick_frame.pack(fill=tk.X, padx=20, pady=(0, 20))
+        
+        tk.Label(quick_frame, text="Quick Commands:", bg='#313244', fg='#cdd6f4', 
+                font=('Arial', 12, 'bold')).pack(anchor=tk.W, padx=10, pady=(10, 5))
+        
+        button_frame = tk.Frame(quick_frame, bg='#313244')
+        button_frame.pack(padx=10, pady=(0, 10))
+        
+        quick_commands = [
+            ("pp", "Show Players", self.cmd_show_players),
+            ("best", "Show Best", self.cmd_show_best),
+            ("name", "Export Names", self.cmd_show_names),
+            ("pp diamond", "Diamond Players", lambda: self.execute_command("pp diamond")),
+            ("pp master", "Master Players", lambda: self.execute_command("pp master"))
+        ]
+        
+        for i, (cmd, text, func) in enumerate(quick_commands):
+            btn = ttk.Button(button_frame, text=f"{text}", command=func, style='Custom.TButton')
+            btn.grid(row=i//3, column=i%3, padx=5, pady=2, sticky='ew')
+        
+        # Command input with autocomplete
+        input_frame = tk.Frame(command_frame, bg='#313244', relief=tk.RAISED, bd=2)
+        input_frame.pack(fill=tk.X, padx=20, pady=(0, 20))
+        
+        tk.Label(input_frame, text="Command Input (with autocomplete):", bg='#313244', fg='#cdd6f4', 
+                font=('Arial', 12, 'bold')).pack(anchor=tk.W, padx=10, pady=(10, 5))
+        
+        self.command_entry = tk.Entry(input_frame, font=('Consolas', 11), bg='#45475a', fg='#cdd6f4',
+                                     insertbackground='#cdd6f4', relief=tk.FLAT, bd=5)
+        self.command_entry.pack(fill=tk.X, padx=10, pady=(0, 10))
+        
+        # Suggestions listbox
+        self.suggestions_frame = tk.Frame(input_frame, bg='#313244')
+        self.suggestions_listbox = tk.Listbox(self.suggestions_frame, height=4, bg='#45475a', fg='#cdd6f4',
+                                             font=('Consolas', 9), selectbackground='#89b4fa')
+        self.suggestions_listbox.pack(fill=tk.X, padx=10)
+        
+        # Execute button
+        execute_btn = ttk.Button
