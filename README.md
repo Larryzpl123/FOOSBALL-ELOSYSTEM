@@ -4,7 +4,7 @@
 
 [ScoreBoard](https://larryzpl123.github.io/FOOSBALL-ELOSYSTEM/index.html)
 
-## Overview
+## Overview 
 
 This documentation provides an overview of a simple foosball Elo system, detailing its components, functionality, and the underlying mathematical principles of the Elo rating algorithm and Fibonacci protection.
 
